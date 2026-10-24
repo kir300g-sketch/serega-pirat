@@ -1,0 +1,10 @@
+{
+  "vibeman":           { "sounds": [ { "name": "pirate_challenge:vibeman", "stream": true } ] },
+  "tp_na_ame":         { "sounds": [ { "name": "pirate_challenge:tp_na_ame", "stream": true } ] },
+  "moy_topor":         { "sounds": [ { "name": "pirate_challenge:moy_topor", "stream": true } ] },
+  "kachalka":          { "sounds": [ { "name": "pirate_challenge:kachalka", "stream": true } ] },
+  "v_etoy_trave":      { "sounds": [ { "name": "pirate_challenge:v_etoy_trave", "stream": true } ] },
+  "ya_vzletayu_vverh": { "sounds": [ { "name": "pirate_challenge:ya_vzletayu_vverh", "stream": true } ] },
+  "russell_crowe":     { "sounds": [ { "name": "pirate_challenge:russell_crowe", "stream": true } ] },
+  "natalia":           { "sounds": [ { "name": "pirate_challenge:natalia", "stream": true } ] }
+}

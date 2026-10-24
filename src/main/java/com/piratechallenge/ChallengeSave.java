@@ -1,0 +1,52 @@
+package com.piratechallenge;
+
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.PersistentState;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+/** Хранит прогресс (сколько треков прослушано) между перезапусками мира. */
+public class ChallengeSave extends PersistentState {
+    public final Map<UUID, PlayerData> players = new HashMap<>();
+
+    public static final PersistentState.Type<ChallengeSave> TYPE =
+            new PersistentState.Type<>(ChallengeSave::new, ChallengeSave::fromNbt, null);
+
+    public static ChallengeSave get(MinecraftServer server) {
+        return server.getOverworld().getPersistentStateManager().getOrCreate(TYPE, "pirate_challenge");
+    }
+
+    public PlayerData get(UUID id) {
+        return players.computeIfAbsent(id, k -> new PlayerData());
+    }
+
+    public static ChallengeSave fromNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
+        ChallengeSave s = new ChallengeSave();
+        NbtCompound ps = nbt.getCompound("players");
+        for (String key : ps.getKeys()) {
+            NbtCompound c = ps.getCompound(key);
+            PlayerData d = new PlayerData();
+            d.listened = c.getInt("listened");
+            for (int i : c.getIntArray("played")) d.played.add(i);
+            s.players.put(UUID.fromString(key), d);
+        }
+        return s;
+    }
+
+    @Override
+    public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
+        NbtCompound ps = new NbtCompound();
+        for (Map.Entry<UUID, PlayerData> e : players.entrySet()) {
+            NbtCompound c = new NbtCompound();
+            c.putInt("listened", e.getValue().listened);
+            c.putIntArray("played", e.getValue().played.stream().mapToInt(Integer::intValue).toArray());
+            ps.put(e.getKey().toString(), c);
+        }
+        nbt.put("players", ps);
+        return nbt;
+    }
+}
