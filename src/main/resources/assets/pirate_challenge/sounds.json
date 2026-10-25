@@ -6,5 +6,8 @@
   "v_etoy_trave":      { "sounds": [ { "name": "pirate_challenge:v_etoy_trave", "stream": true } ] },
   "ya_vzletayu_vverh": { "sounds": [ { "name": "pirate_challenge:ya_vzletayu_vverh", "stream": true } ] },
   "russell_crowe":     { "sounds": [ { "name": "pirate_challenge:russell_crowe", "stream": true } ] },
-  "natalia":           { "sounds": [ { "name": "pirate_challenge:natalia", "stream": true } ] }
+  "natalia":           { "sounds": [ { "name": "pirate_challenge:natalia", "stream": true } ] },
+  "zombie_apocalypse": { "sounds": [ { "name": "pirate_challenge:zombie_apocalypse", "stream": true } ] },
+  "vor":               { "sounds": [ { "name": "pirate_challenge:vor", "stream": true } ] },
+  "apelsin":           { "sounds": [ { "name": "pirate_challenge:apelsin", "stream": true } ] }
 }

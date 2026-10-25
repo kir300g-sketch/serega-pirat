@@ -32,6 +32,9 @@ public final class ChallengeManager {
         EFFECTS.put(Track.YA_VZLETAYU_VVERH, new FlyEffect());
         EFFECTS.put(Track.RUSSELL_CROWE, new CroweEffect());
         EFFECTS.put(Track.NATALIA, new NataliaEffect());
+        EFFECTS.put(Track.ZOMBIE_APOCALYPSE, new ZombieEffect());
+        EFFECTS.put(Track.THIEF, new ThiefEffect());
+        EFFECTS.put(Track.ORANGE, new OrangeEffect());
     }
 
     public static PlayerData data(ServerPlayerEntity p) {
@@ -74,6 +77,11 @@ public final class ChallengeManager {
             PlayerData d = save.get(p.getUuid());
             GlobalDebuffs.tick(p, d.listened);
             if (!p.isAlive()) continue;
+
+            if (d.listened >= 10 && --d.thoughtTimer <= 0) {
+                d.thoughtTimer = Thoughts.nextDelayTicks();
+                Thoughts.send(p);
+            }
 
             if (d.current == null) {
                 if (--d.restLeft <= 0) startTrack(p, d);

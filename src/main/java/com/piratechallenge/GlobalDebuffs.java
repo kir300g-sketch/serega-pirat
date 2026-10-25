@@ -28,12 +28,9 @@ public final class GlobalDebuffs {
                             EffectUtil.remove(p, EntityAttributes.GENERIC_MOVEMENT_SPEED, EffectUtil.id("apathy_speed"));
                         }
                     }),
-            new Debuff(10, "Выгорание",
-                    "Вы слишком много слушали одно и то же. Максимальное здоровье снижено.",
-                    (p, on) -> {
-                        if (on) EffectUtil.ensure(p, EntityAttributes.GENERIC_MAX_HEALTH, EffectUtil.id("burnout_health"), -4.0, Operation.ADD_VALUE);
-                        else EffectUtil.remove(p, EntityAttributes.GENERIC_MAX_HEALTH, EffectUtil.id("burnout_health"));
-                    })
+            new Debuff(10, "Депрессия",
+                    "Вас накрывает депрессия. Навязчивые мысли будут посещать вас всё чаще.",
+                    (p, on) -> {})
     );
 
     public static void tick(ServerPlayerEntity p, int listened) {

@@ -26,7 +26,7 @@ import java.util.UUID;
 /** Нужно убить 100 жителей за трек. Они спавнятся рядом и убегают. Голод сильнее, с жителей падает сырое мясо. */
 public class NataliaEffect implements TrackEffect {
     public static final String TAG = "pc_victim";
-    public static final int GOAL = 100;
+    public static final int GOAL = 30;
     private static final int MAX_ALIVE = 20;
     private static final Random RNG = new Random();
     private static final List<Item> MEAT = List.of(Items.BEEF, Items.PORKCHOP, Items.MUTTON, Items.CHICKEN);
@@ -41,6 +41,8 @@ public class NataliaEffect implements TrackEffect {
     public void tick(ServerPlayerEntity p, PlayerData d, int elapsed, int total) {
         ServerWorld w = p.getServerWorld();
         p.addStatusEffect(new StatusEffectInstance(StatusEffects.HUNGER, 40, 2, false, false, false));
+        p.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 40, 1, false, false, false));
+        p.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, 40, 1, false, false, false));
 
         if (elapsed % 20 == 0 && d.spawned.size() < MAX_ALIVE) {
             for (int i = 0; i < 2; i++) spawnVillager(p, d);
@@ -53,7 +55,7 @@ public class NataliaEffect implements TrackEffect {
             if (e == null) continue;
             Vec3d away = e.getPos().subtract(p.getPos());
             if (away.lengthSquared() > 24 * 24) continue;
-            Vec3d flat = new Vec3d(away.x, 0, away.z).normalize().multiply(0.26);
+            Vec3d flat = new Vec3d(away.x, 0, away.z).normalize().multiply(0.14);
             double vy = (e.horizontalCollision && e.isOnGround()) ? 0.42 : e.getVelocity().y;
             e.setVelocity(flat.x, vy, flat.z);
             e.setYaw((float) (Math.toDegrees(Math.atan2(-flat.x, flat.z))));
@@ -94,6 +96,8 @@ public class NataliaEffect implements TrackEffect {
     @Override
     public void end(ServerPlayerEntity p, PlayerData d) {
         p.removeStatusEffect(StatusEffects.HUNGER);
+        p.removeStatusEffect(StatusEffects.SPEED);
+        p.removeStatusEffect(StatusEffects.STRENGTH);
         if (d.kills < GOAL) {
             p.sendMessage(Text.literal("§7Ты не справился. Душ: " + d.kills + "/" + GOAL + ". Расплата."), false);
             p.addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 15 * 20, 1));

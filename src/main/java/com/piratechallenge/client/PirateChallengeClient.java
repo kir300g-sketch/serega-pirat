@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.option.Perspective;
 import net.minecraft.client.util.InputUtil;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,6 +30,11 @@ public class PirateChallengeClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             ClientState.tick();
             randomKeys(mc);
+            // «Ну и что, что я вор?»: смотреть с F5 нельзя
+            if (mc.player != null && ClientState.track() == Track.THIEF
+                    && mc.options.getPerspective() != Perspective.FIRST_PERSON) {
+                mc.options.setPerspective(Perspective.FIRST_PERSON);
+            }
         });
     }
 

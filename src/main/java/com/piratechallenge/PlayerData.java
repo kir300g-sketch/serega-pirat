@@ -25,8 +25,31 @@ public class PlayerData {
     public double lastScale;
     public UUID target;
     public Vec3d lastPos = Vec3d.ZERO;
+    public final Map<UUID, Integer> blacklist = new HashMap<>();
+    public final Map<UUID, Integer> eat = new HashMap<>();
+    public double bestDist = 1e9;
+    public int stuckTicks;
+    public UUID stealTarget;
+    public int stealTicks;
+    public double stealth;
+    public boolean wanted;
+    public int nextCop;
+    public int slices = 9;
+
+    /** Таймер навязчивых мыслей (депрессия), не сбрасывается между треками. */
+    public int thoughtTimer = 20 * 40;
 
     public void resetRuntime() {
+        blacklist.clear();
+        eat.clear();
+        bestDist = 1e9;
+        stuckTicks = 0;
+        stealTarget = null;
+        stealTicks = 0;
+        stealth = 0;
+        wanted = false;
+        nextCop = 0;
+        slices = 9;
         spawned.clear();
         kills = 0;
         pump = 100;

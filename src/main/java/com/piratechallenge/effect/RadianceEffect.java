@@ -4,6 +4,7 @@ import com.piratechallenge.ModItems;
 import com.piratechallenge.PlayerData;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -28,6 +29,9 @@ public class RadianceEffect implements TrackEffect {
 
     @Override
     public void tick(ServerPlayerEntity p, PlayerData d, int elapsed, int total) {
+        if (total - elapsed == 200) {
+            EffectUtil.bar(p, "§6Брось Radiance на землю, чтобы сохранить его навсегда!");
+        }
         if (!p.getMainHandStack().isOf(ModItems.RADIANCE)) return;
 
         p.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 10, 6, false, false, false));
@@ -62,5 +66,11 @@ public class RadianceEffect implements TrackEffect {
         }
         p.removeStatusEffect(StatusEffects.SPEED);
         p.removeStatusEffect(StatusEffects.JUMP_BOOST);
+
+        // Радик, брошенный на землю, спасён: не исчезает и остаётся лежать (без скорости, но с уроном и копанием)
+        for (ItemEntity ie : p.getServerWorld().getEntitiesByClass(ItemEntity.class,
+                p.getBoundingBox().expand(96), e -> e.getStack().isOf(ModItems.RADIANCE))) {
+            ie.setNeverDespawn();
+        }
     }
 }

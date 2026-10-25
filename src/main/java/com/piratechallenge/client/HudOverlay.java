@@ -94,11 +94,43 @@ public final class HudOverlay {
                 }
                 ctx.fillGradient(0, 0, w, h / 3, 0xAA000000, 0x00000000);
             }
+            case ZOMBIE_APOCALYPSE -> {
+                fill(ctx, 0, 0, w, h, 55, 0x1A3A10);
+                int elapsed = ClientState.total - ClientState.ticksLeft;
+                int wave = Math.min(2, elapsed * 3 / Math.max(1, ClientState.total));
+                int a = 40 + wave * 35 + (int) (20 * Math.sin(time * (2 + wave * 2)));
+                ctx.fillGradient(0, h * 2 / 3, w, h, 0x00000000, (MathHelper.clamp(a, 0, 255) << 24) | 0x600000);
+            }
+            case THIEF -> balaclava(ctx, w, h);
+            case ORANGE -> {
+                fill(ctx, 0, 0, w, h, 100, 0xFF7A00);
+                ctx.fillGradient(0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
+            }
             case NATALIA -> {
                 fill(ctx, 0, 0, w, h, 40 + (int) (15 * Math.sin(time * 4)), 0x8B0000);
                 ctx.fillGradient(0, h * 2 / 3, w, h, 0x00000000, 0xAA400000);
             }
         }
+    }
+
+    /** Балаклава: чёрная маска с узкой прорезью для глаз; нижние 80px оставлены, чтобы был виден хотбар. */
+    private static void balaclava(DrawContext ctx, int w, int h) {
+        int slitTop = (int) (h * 0.43f);
+        int slitBottom = (int) (h * 0.55f);
+        int slitLeft = (int) (w * 0.14f);
+        int slitRight = (int) (w * 0.86f);
+        int bottomEnd = Math.max(slitBottom, h - 80);
+        int black = 0xFF050505;
+        ctx.fill(0, 0, w, slitTop, black);
+        ctx.fill(0, slitBottom, w, bottomEnd, black);
+        ctx.fill(0, slitTop, slitLeft, slitBottom, black);
+        ctx.fill(slitRight, slitTop, w, slitBottom, black);
+        // «вязаная» текстура
+        for (int y = 0; y < slitTop; y += 6) ctx.fill(0, y, w, y + 1, 0x22FFFFFF);
+        for (int y = slitBottom; y < bottomEnd; y += 6) ctx.fill(0, y, w, y + 1, 0x22FFFFFF);
+        // мягкие края прорези
+        ctx.fillGradient(slitLeft, slitTop, slitRight, slitTop + 8, 0xCC000000, 0x00000000);
+        ctx.fillGradient(slitLeft, slitBottom - 8, slitRight, slitBottom, 0x00000000, 0xCC000000);
     }
 
     // ------------------------------------------------------------ заголовок и описание
@@ -148,6 +180,13 @@ public final class HudOverlay {
         ctx.drawTextWithShadow(tr, timer, w - tr.getWidth(timer) - 6, 17, 0xFFCCCCCC);
 
         int y = 30;
+        if (ClientState.track() == Track.ZOMBIE_APOCALYPSE && ClientState.total > 0) {
+            int el = ClientState.total - ClientState.ticksLeft;
+            int wave = Math.min(2, el * 3 / ClientState.total) + 1;
+            String ws = "Волна " + wave + " / 3";
+            ctx.drawTextWithShadow(tr, ws, w - tr.getWidth(ws) - 6, y, 0xFFFF5555);
+            y += 11;
+        }
         for (GlobalDebuffs.Debuff d : GlobalDebuffs.ALL) {
             if (ClientState.listened >= d.threshold()) {
                 String s = "☠ " + d.name();

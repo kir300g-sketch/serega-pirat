@@ -65,6 +65,14 @@ public final class EffectUtil {
         p.sendMessage(Text.literal(text), true);
     }
 
+    /** Убирает из списка спавна мёртвых/исчезнувших существ (иначе лимит спавна забивается). */
+    public static void prune(ServerWorld w, PlayerData d) {
+        d.spawned.removeIf(id -> {
+            Entity e = w.getEntity(id);
+            return e == null || !e.isAlive();
+        });
+    }
+
     /** Удаляет всех существ, заспавненных треком (фантомы, хейтеры, жители...). */
     public static void discardSpawned(ServerPlayerEntity p, PlayerData d) {
         for (UUID id : d.spawned) {

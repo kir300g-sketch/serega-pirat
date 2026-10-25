@@ -14,18 +14,21 @@ import net.minecraft.world.Heightmap;
 
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * Тошнота + пульсирующая тьма (ваниль) + радужный экран (клиент) + фантомные монстры.
- * После трека — похмелье (ставится в конце, применяется менеджером на следующем треке).
+ * Каждые 10 секунд — новая волна (3–5 монстров), все настроены на игрока. Эндермены в чёрном списке.
  */
 public class GrassEffect implements TrackEffect {
     private static final Random RNG = new Random();
-    private static final int MAX_PHANTOMS = 12;
+    private static final int WAVE_TICKS = 200;
+    private static final int MAX_PHANTOMS = 40;
 
+    // эндермены (ENDERMAN) сюда специально не входят
     private static final List<EntityType<?>> COMMON = List.of(
             EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.SPIDER,
-            EntityType.ENDERMAN, EntityType.RAVAGER, EntityType.WITHER_SKELETON, EntityType.BLAZE,
+            EntityType.RAVAGER, EntityType.WITHER_SKELETON, EntityType.BLAZE,
             EntityType.VEX, EntityType.GHAST);
 
     @Override
@@ -35,18 +38,33 @@ public class GrassEffect implements TrackEffect {
 
     @Override
     public void tick(ServerPlayerEntity p, PlayerData d, int elapsed, int total) {
+        ServerWorld w = p.getServerWorld();
+        EffectUtil.prune(w, d);
+
         if (elapsed % 120 == 0) {
             p.addStatusEffect(new StatusEffectInstance(StatusEffects.DARKNESS, 80, 0, false, false, false));
         }
-        if (elapsed % 50 == 0 && d.spawned.size() < MAX_PHANTOMS) {
-            spawnPhantom(p, d);
+
+        // волна каждые 10 секунд (первая — почти сразу)
+        if (elapsed % WAVE_TICKS == 40) {
+            int n = 3 + RNG.nextInt(3);
+            for (int i = 0; i < n && d.spawned.size() < MAX_PHANTOMS; i++) spawnPhantom(p, d);
+        }
+
+        // все монстры всегда нацелены на игрока
+        if (elapsed % 40 == 0) {
+            for (UUID id : d.spawned) {
+                Entity e = w.getEntity(id);
+                if (e instanceof MobEntity m) m.setTarget(p);
+                if (e instanceof WardenEntity warden) warden.increaseAngerAt(p, 150, false);
+            }
         }
     }
 
     private void spawnPhantom(ServerPlayerEntity p, PlayerData d) {
         ServerWorld w = p.getServerWorld();
         EntityType<?> type;
-        int roll = RNG.nextInt(12);
+        int roll = RNG.nextInt(14);
         if (roll == 0) type = EntityType.WARDEN;
         else if (roll == 1) type = EntityType.ENDER_DRAGON;
         else type = COMMON.get(RNG.nextInt(COMMON.size()));

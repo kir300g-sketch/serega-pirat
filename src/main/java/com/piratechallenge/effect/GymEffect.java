@@ -57,8 +57,11 @@ public class GymEffect implements TrackEffect {
     private static void applyScale(ServerPlayerEntity p, double s) {
         double extra = s - 1.0;
         EffectUtil.ensure(p, EntityAttributes.GENERIC_SCALE, EffectUtil.id("gym_scale"), extra, Operation.ADD_MULTIPLIED_BASE);
-        EffectUtil.ensure(p, EntityAttributes.PLAYER_BLOCK_INTERACTION_RANGE, EffectUtil.id("gym_reach"), extra * 1.5, Operation.ADD_VALUE);
-        EffectUtil.ensure(p, EntityAttributes.PLAYER_ENTITY_INTERACTION_RANGE, EffectUtil.id("gym_reach_e"), extra * 1.5, Operation.ADD_VALUE);
+        EffectUtil.ensure(p, EntityAttributes.PLAYER_BLOCK_INTERACTION_RANGE, EffectUtil.id("gym_reach"), extra * 3.0, Operation.ADD_VALUE);
+        EffectUtil.ensure(p, EntityAttributes.PLAYER_ENTITY_INTERACTION_RANGE, EffectUtil.id("gym_reach_e"), extra * 3.0, Operation.ADD_VALUE);
+        EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_DAMAGE, EffectUtil.id("gym_damage"), extra * 2.0, Operation.ADD_VALUE);
+        EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("gym_knockback"), extra * 0.3, Operation.ADD_VALUE);
+        EffectUtil.ensure(p, EntityAttributes.GENERIC_JUMP_STRENGTH, EffectUtil.id("gym_jump"), extra * 0.1, Operation.ADD_VALUE);
         EffectUtil.ensure(p, EntityAttributes.GENERIC_STEP_HEIGHT, EffectUtil.id("gym_step"), extra * 0.5, Operation.ADD_VALUE);
         EffectUtil.ensure(p, EntityAttributes.GENERIC_SAFE_FALL_DISTANCE, EffectUtil.id("gym_fall"), extra * 3, Operation.ADD_VALUE);
     }
@@ -70,6 +73,9 @@ public class GymEffect implements TrackEffect {
         EffectUtil.remove(p, EntityAttributes.PLAYER_ENTITY_INTERACTION_RANGE, EffectUtil.id("gym_reach_e"));
         EffectUtil.remove(p, EntityAttributes.GENERIC_STEP_HEIGHT, EffectUtil.id("gym_step"));
         EffectUtil.remove(p, EntityAttributes.GENERIC_SAFE_FALL_DISTANCE, EffectUtil.id("gym_fall"));
+        EffectUtil.remove(p, EntityAttributes.GENERIC_ATTACK_DAMAGE, EffectUtil.id("gym_damage"));
+        EffectUtil.remove(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("gym_knockback"));
+        EffectUtil.remove(p, EntityAttributes.GENERIC_JUMP_STRENGTH, EffectUtil.id("gym_jump"));
     }
 
     /** Один сломанный блок = куб 10x10x10 (меняй размеры тут). */
