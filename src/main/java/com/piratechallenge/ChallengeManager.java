@@ -38,6 +38,9 @@ public final class ChallengeManager {
         EFFECTS.put(Track.FP_AM, new AntiMageEffect());
         EFFECTS.put(Track.COWBOY, new CowboyEffect());
         EFFECTS.put(Track.NOGA, new NogaEffect());
+        EFFECTS.put(Track.LASTPICK, new LastPickEffect());
+        EFFECTS.put(Track.N911, new EmergencyEffect());
+        EFFECTS.put(Track.FANAT, new FanatEffect());
     }
 
     public static PlayerData data(ServerPlayerEntity p) {
@@ -116,6 +119,7 @@ public final class ChallengeManager {
                 else if (d.restLeft % 20 == 0) sync(p, d);
             } else {
                 int elapsed = d.totalTicks - d.ticksLeft;
+                if (d.listened >= 15 && p.age % 5 == 0) WallCover.check(p, d);
                 EFFECTS.get(d.current).tick(p, d, elapsed, d.totalTicks);
                 if (d.current == null) continue; // эффект мог сам завершить игру (смерть)
                 if (--d.ticksLeft <= 0) finish(p, d, true);
@@ -157,6 +161,9 @@ public final class ChallengeManager {
         if (t == null) return;
         EFFECTS.get(t).end(p, d);
         EffectUtil.discardSpawned(p, d);
+        EffectUtil.clearTaggedDrops(p); // выброшенные/выпавшие выданные предметы
+        d.intro = false;
+        d.coverEars = false;
         d.current = null;
         d.restLeft = REST_TICKS;
 
@@ -180,7 +187,7 @@ public final class ChallengeManager {
         int id = d.current == null ? -1 : d.current.ordinal();
         int left = d.current == null ? d.restLeft : d.ticksLeft;
         int total = d.current == null ? REST_TICKS : d.totalTicks;
-        int flags = d.paused ? 1 : 0;
+        int flags = (d.paused ? 1 : 0) | (d.intro ? 2 : 0) | (d.coverEars ? 4 : 0);
         ServerPlayNetworking.send(p, new StatePayload(id, left, total, d.listened, flags));
     }
 

@@ -83,6 +83,54 @@ public final class EffectUtil {
         p.sendMessage(Text.literal(text), true);
     }
 
+    /** Удаляет выброшенные на землю выданные предметы рядом с игроком (после смерти и т.п.). */
+    public static void clearTaggedDrops(ServerPlayerEntity p) {
+        for (net.minecraft.entity.ItemEntity ie : p.getServerWorld().getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
+                p.getBoundingBox().expand(10), e -> isTagged(e.getStack()))) {
+            ie.discard();
+        }
+    }
+
+    /** Случайная броня для моба: каждый слот с шансом 55%, материал случайный (кожа/кольчуга/железо/золото/алмаз). Дроп отключён. */
+    public static void randomArmor(net.minecraft.entity.mob.MobEntity m, java.util.Random rng) {
+        net.minecraft.item.Item[][] tiers = {
+                {net.minecraft.item.Items.LEATHER_HELMET, net.minecraft.item.Items.LEATHER_CHESTPLATE, net.minecraft.item.Items.LEATHER_LEGGINGS, net.minecraft.item.Items.LEATHER_BOOTS},
+                {net.minecraft.item.Items.CHAINMAIL_HELMET, net.minecraft.item.Items.CHAINMAIL_CHESTPLATE, net.minecraft.item.Items.CHAINMAIL_LEGGINGS, net.minecraft.item.Items.CHAINMAIL_BOOTS},
+                {net.minecraft.item.Items.IRON_HELMET, net.minecraft.item.Items.IRON_CHESTPLATE, net.minecraft.item.Items.IRON_LEGGINGS, net.minecraft.item.Items.IRON_BOOTS},
+                {net.minecraft.item.Items.GOLDEN_HELMET, net.minecraft.item.Items.GOLDEN_CHESTPLATE, net.minecraft.item.Items.GOLDEN_LEGGINGS, net.minecraft.item.Items.GOLDEN_BOOTS},
+                {net.minecraft.item.Items.DIAMOND_HELMET, net.minecraft.item.Items.DIAMOND_CHESTPLATE, net.minecraft.item.Items.DIAMOND_LEGGINGS, net.minecraft.item.Items.DIAMOND_BOOTS}};
+        int[] weights = {40, 25, 20, 10, 5};
+        net.minecraft.entity.EquipmentSlot[] slots = {net.minecraft.entity.EquipmentSlot.HEAD, net.minecraft.entity.EquipmentSlot.CHEST,
+                net.minecraft.entity.EquipmentSlot.LEGS, net.minecraft.entity.EquipmentSlot.FEET};
+        for (int i = 0; i < 4; i++) {
+            if (rng.nextInt(100) >= 55) continue;
+            int roll = rng.nextInt(100), tier = 0;
+            for (int t = 0; t < weights.length; t++) {
+                roll -= weights[t];
+                if (roll < 0) { tier = t; break; }
+            }
+            m.equipStack(slots[i], new ItemStack(tiers[tier][i]));
+            m.setEquipmentDropChance(slots[i], 0f);
+        }
+    }
+
+    /** Возвращает сохранённую экипировку (голова, грудь, ноги, ступни, вторая рука). Если игрок мёртв — выбрасывает на место возврата. */
+    public static void restoreSaved(ServerPlayerEntity p, PlayerData d) {
+        net.minecraft.entity.EquipmentSlot[] slots = {net.minecraft.entity.EquipmentSlot.HEAD, net.minecraft.entity.EquipmentSlot.CHEST,
+                net.minecraft.entity.EquipmentSlot.LEGS, net.minecraft.entity.EquipmentSlot.FEET, net.minecraft.entity.EquipmentSlot.OFFHAND};
+        for (int i = 0; i < 5; i++) {
+            ItemStack st = d.saved[i];
+            if (st == null) continue;
+            d.saved[i] = null;
+            if (p.isAlive()) {
+                p.equipStack(slots[i], st);
+            } else if (!st.isEmpty()) {
+                net.minecraft.util.math.Vec3d at = d.returnPos != null ? d.returnPos : p.getPos();
+                p.getServerWorld().spawnEntity(new net.minecraft.entity.ItemEntity(p.getServerWorld(), at.x, at.y + 0.5, at.z, st));
+            }
+        }
+    }
+
     /** Убирает из списка спавна мёртвых/исчезнувших существ (иначе лимит спавна забивается). */
     public static void prune(ServerWorld w, PlayerData d) {
         d.spawned.removeIf(id -> {

@@ -1,12 +1,11 @@
 package com.piratechallenge.client;
 
 import com.piratechallenge.AmStatePayload;
+import com.piratechallenge.CompassPayload;
 import com.piratechallenge.ModSounds;
 import com.piratechallenge.StatePayload;
 import com.piratechallenge.Track;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.sound.SoundCategory;
 
 public final class ClientState {
@@ -25,7 +24,14 @@ public final class ClientState {
     public static String qteLetters = "";
     public static int qteTicks;
 
-    private static SoundInstance sound;
+    public static boolean intro;
+    public static boolean coverEars;
+
+    // Ковбой: стрелка на ближайшего вора
+    public static boolean cmpValid;
+    public static double cmpX, cmpZ;
+
+    private static MusicInstance sound;
 
     public static Track track() {
         return Track.byId(trackId);
@@ -37,6 +43,10 @@ public final class ClientState {
         ticksLeft = p.ticksLeft();
         total = p.totalTicks();
         listened = p.listened();
+
+        intro = p.intro();
+        coverEars = p.coverEars();
+        if (sound != null) sound.setTargetVolume(coverEars ? 0.15f : 1.0f);
 
         boolean nowPaused = p.paused();
         if (nowPaused != paused) {
@@ -51,14 +61,27 @@ public final class ClientState {
             qteTicks = 0;
             qteLetters = "";
             stopSound();
-            Track t = track();
-            if (t != null) {
-                MinecraftClient mc = MinecraftClient.getInstance();
-                mc.getSoundManager().stopSounds(null, SoundCategory.MUSIC); // глушим ванильную музыку
-                sound = PositionedSoundInstance.master(ModSounds.get(t), 1.0f, 1.0f);
-                mc.getSoundManager().play(sound);
-            }
+            cmpValid = false;
+            if (track() == Track.FANAT) ChessScreen.resetGame();
         }
+        startMusicIfNeeded();
+    }
+
+    /** Музыка стартует, когда идёт трек и закончилось вступление (настройка микрофона в «Ластпике»). */
+    private static void startMusicIfNeeded() {
+        Track t = track();
+        if (t == null || intro || sound != null) return;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        mc.getSoundManager().stopSounds(null, SoundCategory.MUSIC); // глушим ванильную музыку
+        sound = new MusicInstance(ModSounds.get(t));
+        sound.setTargetVolume(coverEars ? 0.15f : 1.0f);
+        mc.getSoundManager().play(sound);
+    }
+
+    public static void updateCompass(CompassPayload p) {
+        cmpValid = p.valid();
+        cmpX = p.x();
+        cmpZ = p.z();
     }
 
     public static void updateAm(AmStatePayload p) {
@@ -82,6 +105,7 @@ public final class ClientState {
 
     public static void stopSound() {
         if (sound != null) {
+            sound.finish();
             MinecraftClient.getInstance().getSoundManager().stop(sound);
             sound = null;
         }
@@ -95,6 +119,9 @@ public final class ClientState {
         paused = false;
         qteTicks = 0;
         qteLetters = "";
+        intro = false;
+        coverEars = false;
+        cmpValid = false;
     }
 
     private ClientState() {}

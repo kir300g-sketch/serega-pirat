@@ -54,6 +54,17 @@ public class PlayerData {
     public int ammo = 6, reload;
     public UUID horseId;
     public double heading;
+    // Сцена / арена
+    public Vec3d returnPos;
+    public net.minecraft.util.math.BlockPos arenaCenter;
+    public int arenaHalf, arenaH;
+    public final net.minecraft.item.ItemStack[] saved = new net.minecraft.item.ItemStack[5];
+    public int duelWait;
+    // Ластпик (пение)
+    public boolean intro;
+    public int singTicks, lastSingTick, micState; // micState: 0 неизвестно, 1 есть, 2 нет
+    public boolean coverEars;
+    public boolean coverNotified;
     // Нога
     public boolean qteActive;
     public int qteLeft, nextQte;
@@ -83,6 +94,18 @@ public class PlayerData {
         reload = 0;
         horseId = null;
         heading = 0;
+        returnPos = null;
+        arenaCenter = null;
+        arenaHalf = 0;
+        arenaH = 0;
+        java.util.Arrays.fill(saved, null);
+        duelWait = 0;
+        intro = false;
+        singTicks = 0;
+        lastSingTick = 0;
+        micState = 0;
+        coverEars = false;
+        coverNotified = false;
         qteActive = false;
         qteLeft = 0;
         nextQte = 0;

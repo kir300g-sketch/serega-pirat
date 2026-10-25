@@ -1,6 +1,8 @@
 package com.piratechallenge.client;
 
 import com.piratechallenge.AmStatePayload;
+import com.piratechallenge.CompassPayload;
+import com.piratechallenge.SingPayload;
 import com.piratechallenge.ModEntities;
 import com.piratechallenge.QtePayload;
 import com.piratechallenge.StatePayload;
@@ -37,7 +39,13 @@ public class PirateChallengeClient implements ClientModInitializer {
                     ClientState.qteTicks = payload.ticks();
                 }));
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
+        ClientPlayNetworking.registerGlobalReceiver(CompassPayload.ID,
+                (payload, context) -> context.client().execute(() -> ClientState.updateCompass(payload)));
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClientState.reset();
+            MicMonitor.stop();
+        });
 
         HudRenderCallback.EVENT.register(HudOverlay::render);
 
@@ -45,6 +53,7 @@ public class PirateChallengeClient implements ClientModInitializer {
             ClientState.tick();
             randomKeys(mc);
             screens(mc);
+            mic(mc);
         });
     }
 
@@ -70,9 +79,38 @@ public class PirateChallengeClient implements ClientModInitializer {
             mc.setScreen(null);
         }
 
+        // Шахматы (фанат): доска на весь экран, пока идёт трек и партия не закончена
+        if (t == Track.FANAT && !ClientState.paused && !ChessScreen.finished) {
+            if (mc.currentScreen == null && Util.getMeasuringTimeMs() >= ChessScreen.reopenAtMs) {
+                mc.setScreen(new ChessScreen());
+            }
+        } else if (mc.currentScreen instanceof ChessScreen && t != Track.FANAT) {
+            mc.setScreen(null);
+        }
+
         // Нога: комбинация букв
         if (ClientState.qteTicks > 0 && !ClientState.qteLetters.isEmpty() && !(mc.currentScreen instanceof QteScreen)) {
             mc.setScreen(new QteScreen());
+        }
+    }
+
+    private static int micTick;
+
+    /** «Ластпик сапорт»: микрофон включён только на время этого трека; на сервер уходят лишь флаги. */
+    private static void mic(MinecraftClient mc) {
+        boolean need = mc.player != null && ClientState.track() == Track.LASTPICK && !ClientState.paused;
+        if (need) {
+            if (!MicMonitor.isRunning()) MicMonitor.start();
+            if (++micTick % 10 == 0) {
+                // пока микрофон ещё пробуется открыть, не сообщаем «нет микрофона»
+                boolean ok = MicMonitor.isOk();
+                if (ok || MicMonitor.tried()) {
+                    ClientPlayNetworking.send(new SingPayload(MicMonitor.singing(), ok));
+                }
+            }
+        } else if (MicMonitor.isRunning()) {
+            MicMonitor.stop();
+            micTick = 0;
         }
     }
 

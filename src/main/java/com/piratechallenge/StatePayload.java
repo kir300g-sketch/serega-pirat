@@ -23,6 +23,16 @@ public record StatePayload(int trackId, int ticksLeft, int totalTicks, int liste
         return (flags & 1) != 0;
     }
 
+    /** Вступление трека (настройка микрофона): музыка ещё не играет. */
+    public boolean intro() {
+        return (flags & 2) != 0;
+    }
+
+    /** Игрок прижался к стене и «заткнул уши» (после 15 треков): музыка глуше. */
+    public boolean coverEars() {
+        return (flags & 4) != 0;
+    }
+
     @Override
     public CustomPayload.Id<? extends CustomPayload> getId() {
         return ID;

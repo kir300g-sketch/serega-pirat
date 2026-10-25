@@ -76,6 +76,19 @@ public class FlyEffect implements TrackEffect {
         }
 
         if (ascending) {
+            // блоки над головой ломаются (шахта, потолок, платформа — не спасут)
+            if (elapsed % 2 == 0) {
+                net.minecraft.util.math.BlockPos head = p.getBlockPos().up((int) Math.ceil(p.getHeight()));
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        for (int dy = 0; dy <= 4; dy++) {
+                            net.minecraft.util.math.BlockPos bp = head.add(dx, dy, dz);
+                            net.minecraft.block.BlockState st = w.getBlockState(bp);
+                            if (!st.isAir() && st.getHardness(w, bp) >= 0) w.breakBlock(bp, false);
+                        }
+                    }
+                }
+            }
             p.setNoGravity(true);
             double vy = p.getY() >= MAX_ALTITUDE ? 0 : ASCENT_SPEED;
             p.setVelocity(p.getVelocity().x * 0.9, vy, p.getVelocity().z * 0.9);

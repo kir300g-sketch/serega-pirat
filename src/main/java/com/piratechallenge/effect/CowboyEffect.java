@@ -1,6 +1,7 @@
 package com.piratechallenge.effect;
 
 import com.piratechallenge.ChallengeManager;
+import com.piratechallenge.CompassPayload;
 import com.piratechallenge.ModItems;
 import com.piratechallenge.PlayerData;
 import com.piratechallenge.Track;
@@ -13,6 +14,8 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.passive.AbstractHorseEntity;
 import net.minecraft.entity.passive.VillagerEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -46,6 +49,8 @@ public class CowboyEffect implements TrackEffect {
     private static final double PLAYER_HORSE_SPEED = 0.30;  // атрибут лошади игрока
     private static final double CONVOY_SPEED = 0.46;        // блоков в тик у воров (чуть меньше игрока)
     private static final Random RNG = new Random();
+    private static final int CROSSBOW_CYCLE = 90; // арбалет заряжается ~4.5 сек, потом выстрел стрелой
+    private static final double CROSSBOW_RANGE = 32;
 
     @Override
     public void start(ServerPlayerEntity p, PlayerData d) {
@@ -136,6 +141,33 @@ public class CowboyEffect implements TrackEffect {
             horse.setYaw(yaw);
         }
 
+        // воры: арбалет (долгая зарядка, потом выстрел обычной стрелой) + ближайший вор для стрелки на экране
+        int idx = 0;
+        LivingEntity nearest = null;
+        double nd = Double.MAX_VALUE;
+        for (UUID id : ids) {
+            Entity e = w.getEntity(id);
+            if (!(e instanceof VillagerEntity thief) || !thief.isAlive() || !thief.getCommandTags().contains(THIEF_TAG)) continue;
+            double dist2 = thief.squaredDistanceTo(p);
+            if (dist2 < nd) { nd = dist2; nearest = thief; }
+
+            int phase = (elapsed + idx * 23) % CROSSBOW_CYCLE;
+            if (phase == CROSSBOW_CYCLE - 12 && dist2 < CROSSBOW_RANGE * CROSSBOW_RANGE) {
+                // предупреждение: заряжен
+                w.spawnParticles(ParticleTypes.CRIT, thief.getX(), thief.getY() + 2.4, thief.getZ(), 6, 0.2, 0.2, 0.2, 0.05);
+                w.playSound(null, thief.getX(), thief.getY(), thief.getZ(), SoundEvents.ENTITY_ARROW_HIT, SoundCategory.HOSTILE, 1.0f, 1.0f);
+            }
+            if (phase == 0 && elapsed > 40 && dist2 < CROSSBOW_RANGE * CROSSBOW_RANGE && thief.canSee(p)) {
+                shootArrow(w, thief, p);
+            }
+            idx++;
+        }
+        if (elapsed % 5 == 0 && p.networkHandler != null) {
+            ServerPlayNetworking.send(p, nearest == null
+                    ? new CompassPayload(false, 0, 0)
+                    : new CompassPayload(true, nearest.getX(), nearest.getZ()));
+        }
+
         // если упал с лошади — садимся обратно
         Entity mine = d.horseId == null ? null : w.getEntity(d.horseId);
         if (mine != null && !p.hasVehicle() && elapsed % 20 == 0 && p.distanceTo(mine) < 4) {
@@ -146,6 +178,21 @@ public class CowboyEffect implements TrackEffect {
             String ammo = "§e" + "●".repeat(Math.max(0, d.ammo)) + "§8" + "○".repeat(Math.max(0, 6 - d.ammo));
             EffectUtil.bar(p, "§fРевольвер: " + ammo + (d.reload > 0 ? " §cперезарядка" : "") + " §7| §cВоры: §f" + d.kills + "/" + THIEVES);
         }
+    }
+
+    private static void shootArrow(ServerWorld w, VillagerEntity thief, ServerPlayerEntity target) {
+        Entity ent = EntityType.ARROW.create(w);
+        if (!(ent instanceof PersistentProjectileEntity arrow)) return;
+        Vec3d from = thief.getEyePos();
+        Vec3d to = target.getPos().add(0, target.getHeight() * 0.6, 0);
+        double dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+        double flat = Math.sqrt(dx * dx + dz * dz);
+        arrow.refreshPositionAndAngles(from.x, from.y, from.z, 0f, 0f);
+        arrow.setOwner(thief);
+        arrow.setVelocity(dx, dy + flat * 0.06, dz, 2.2f, 5.0f); // небольшая поправка на падение
+        arrow.pickupType = PersistentProjectileEntity.PickupPermission.DISALLOWED;
+        w.spawnEntity(arrow);
+        w.playSound(null, thief.getX(), thief.getY(), thief.getZ(), SoundEvents.ENTITY_ARROW_SHOOT, SoundCategory.HOSTILE, 1.0f, 1.0f);
     }
 
     /** Выстрел из револьвера (можно и вне трека — тогда патроны бесконечные). */

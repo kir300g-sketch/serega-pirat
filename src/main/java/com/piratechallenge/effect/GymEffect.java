@@ -30,7 +30,7 @@ public class GymEffect implements TrackEffect {
         boolean sn = p.isSneaking();
         if (sn && !d.wasSneaking) d.pump = Math.min(100, d.pump + 10);
         d.wasSneaking = sn;
-        if (elapsed % 6 == 0) d.pump = Math.max(0, d.pump - 1);
+        if (elapsed % 4 == 0) d.pump = Math.max(0, d.pump - 1);
 
         double s = MIN_SCALE + (MAX_SCALE - MIN_SCALE) * d.pump / 100.0;
         if (Math.abs(s - d.lastScale) > 0.05) {

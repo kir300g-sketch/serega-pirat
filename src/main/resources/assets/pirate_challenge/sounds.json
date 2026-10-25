@@ -110,5 +110,29 @@
         "stream": true
       }
     ]
+  },
+  "lastpick": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:lastpick",
+        "stream": true
+      }
+    ]
+  },
+  "n911": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:n911",
+        "stream": true
+      }
+    ]
+  },
+  "fanat": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:fanat",
+        "stream": true
+      }
+    ]
   }
 }

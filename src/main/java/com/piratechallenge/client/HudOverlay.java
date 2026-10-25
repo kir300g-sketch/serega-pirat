@@ -27,6 +27,9 @@ public final class HudOverlay {
         float time = Util.getMeasuringTimeMs() / 1000f;
         Track t = ClientState.track();
 
+        float light = mc.world == null ? 1f : mc.world.getLightLevel(mc.player.getBlockPos()) / 15f;
+        scale = MathHelper.clamp(0.3f + 0.7f * light, 0.3f, 1f);
+
         if (t != null) {
             overlay(ctx, t, w, h, time);
             title(ctx, mc.textRenderer, t, w, h);
@@ -34,10 +37,65 @@ public final class HudOverlay {
         counter(ctx, mc.textRenderer, w);
 
         if (t == Track.FP_AM) skillBar(ctx, mc.textRenderer, w, h);
+        if (t == Track.LASTPICK) micUi(ctx, mc.textRenderer, w, h);
+        if (t == Track.COWBOY && ClientState.cmpValid) thiefArrow(ctx, mc, w, h);
+        if (t != null && ClientState.coverEars) {
+            ctx.drawCenteredTextWithShadow(mc.textRenderer, "Ты зажал уши...", w / 2, h - 90, 0xFFAAAAAA);
+        }
         if (ClientState.paused) {
             String pause = "⏸ ПАУЗА";
             ctx.drawCenteredTextWithShadow(mc.textRenderer, pause, w / 2, 40, 0xFFFFFF55);
         }
+    }
+
+    /** Ковбой: стрелка над хотбаром, указывающая на ближайшего вора. */
+    private static void thiefArrow(DrawContext ctx, MinecraftClient mc, int w, int h) {
+        double dx = ClientState.cmpX - mc.player.getX();
+        double dz = ClientState.cmpZ - mc.player.getZ();
+        double targetYaw = Math.toDegrees(Math.atan2(-dx, dz));          // yaw в системе Майнкрафта
+        float rel = (float) MathHelper.wrapDegrees(targetYaw - mc.player.getYaw());
+        int dist = (int) Math.sqrt(dx * dx + dz * dz);
+
+        var tr = mc.textRenderer;
+        int cx = w / 2, cy = h - 62;
+        MatrixStack m = ctx.getMatrices();
+        m.push();
+        m.translate(cx, cy, 0);
+        m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(rel));
+        m.scale(2.5f, 2.5f, 1f);
+        ctx.drawText(tr, "▲", -4, -4, 0xFFFF4444, true);
+        m.pop();
+        String txt = "Воры: " + dist + " м";
+        ctx.drawCenteredTextWithShadow(tr, txt, cx, cy + 14, 0xFFFFCC66);
+    }
+
+    /** Ластпик: настройка и индикатор микрофона. */
+    private static void micUi(DrawContext ctx, TextRenderer tr, int w, int h) {
+        boolean ok = MicMonitor.isOk();
+        int barW = 160, x = (w - barW) / 2, y = h - 120;
+
+        if (ClientState.intro) {
+            int left = Math.max(0, (300 - ClientState.age) / 20);
+            ctx.drawCenteredTextWithShadow(tr, "НАСТРОЙ МИКРОФОН — скажи что-нибудь (" + left + " с)", w / 2, h / 3 + 40, 0xFFFF66CC);
+        }
+        ctx.fill(x - 1, y - 1, x + barW + 1, y + 9, 0xFF000000);
+        ctx.fill(x, y, x + barW, y + 8, 0xFF222222);
+        int filled = (int) (barW * MicMonitor.level());
+        ctx.fill(x, y, x + filled, y + 8, MicMonitor.singing() ? 0xFF55FF55 : 0xFFFF5555);
+
+        String status;
+        int color;
+        if (!ok) {
+            status = MicMonitor.tried() ? "Микрофон не найден — штрафов не будет" : "Подключаю микрофон...";
+            color = 0xFFAAAAAA;
+        } else if (ClientState.intro) {
+            status = MicMonitor.singing() ? "Слышу тебя!" : "Говори...";
+            color = MicMonitor.singing() ? 0xFF55FF55 : 0xFFFFFF55;
+        } else {
+            status = MicMonitor.singing() ? "♪ Поёшь!" : "Молчишь! Пой, а то освистают";
+            color = MicMonitor.singing() ? 0xFF55FF55 : 0xFFFF5555;
+        }
+        ctx.drawCenteredTextWithShadow(tr, status, w / 2, y - 12, color);
     }
 
     /** ФП АМ: панель навыков вместо хотбара + мана + счётчик хейтеров. */
@@ -82,8 +140,22 @@ public final class HudOverlay {
 
     // ------------------------------------------------------------ оверлеи треков
 
+    /** Множитель прозрачности цветных фильтров: ночью и в тёмных местах фильтр слабее, чтобы было видно. */
+    private static float scale = 1f;
+
     private static void fill(DrawContext ctx, int x1, int y1, int x2, int y2, int alpha, int rgb) {
-        ctx.fill(x1, y1, x2, y2, (MathHelper.clamp(alpha, 0, 255) << 24) | (rgb & 0xFFFFFF));
+        int a = MathHelper.clamp((int) (alpha * scale), 0, 255);
+        ctx.fill(x1, y1, x2, y2, (a << 24) | (rgb & 0xFFFFFF));
+    }
+
+    private static int scaleArgb(int argb) {
+        int a = (argb >>> 24) & 0xFF;
+        a = MathHelper.clamp((int) (a * scale), 0, 255);
+        return (a << 24) | (argb & 0xFFFFFF);
+    }
+
+    private static void grad(DrawContext ctx, int x1, int y1, int x2, int y2, int c1, int c2) {
+        ctx.fillGradient(x1, y1, x2, y2, scaleArgb(c1), scaleArgb(c2));
     }
 
     private static int hue(float h) {
@@ -105,8 +177,8 @@ public final class HudOverlay {
             case MOY_TOPOR -> {
                 int a = 85 + (int) (30 * Math.sin(time * 6));
                 fill(ctx, 0, 0, w, h, a, 0xB00000);
-                ctx.fillGradient(0, 0, w, h / 4, 0xAA000000, 0x00000000);
-                ctx.fillGradient(0, h * 3 / 4, w, h, 0x00000000, 0xAA000000);
+                grad(ctx, 0, 0, w, h / 4, 0xAA000000, 0x00000000);
+                grad(ctx, 0, h * 3 / 4, w, h, 0x00000000, 0xAA000000);
             }
             case KACHALKA -> fill(ctx, 0, 0, w, h, 18, 0xFF8800);
             case V_ETOY_TRAVE -> {
@@ -138,34 +210,45 @@ public final class HudOverlay {
                     int len = (int) (h * (0.55f + 0.45f * (((i * 31) % 100) / 100f)));
                     fill(ctx, x, 0, x + 2, len, 215, 0x1A120B);
                 }
-                ctx.fillGradient(0, 0, w, h / 3, 0xAA000000, 0x00000000);
+                grad(ctx, 0, 0, w, h / 3, 0xAA000000, 0x00000000);
             }
             case ZOMBIE_APOCALYPSE -> {
                 fill(ctx, 0, 0, w, h, 55, 0x1A3A10);
                 int elapsed = ClientState.total - ClientState.ticksLeft;
                 int wave = Math.min(2, elapsed * 3 / Math.max(1, ClientState.total));
                 int a = 40 + wave * 35 + (int) (20 * Math.sin(time * (2 + wave * 2)));
-                ctx.fillGradient(0, h * 2 / 3, w, h, 0x00000000, (MathHelper.clamp(a, 0, 255) << 24) | 0x600000);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00000000, (MathHelper.clamp(a, 0, 255) << 24) | 0x600000);
             }
             case THIEF -> balaclava(ctx, w, h);
             case ORANGE -> {
                 fill(ctx, 0, 0, w, h, 100, 0xFF7A00);
-                ctx.fillGradient(0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
+                grad(ctx, 0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
             }
             case FP_AM -> fill(ctx, 0, 0, w, h, 22, 0x2255FF);
+            case LASTPICK -> {
+                // прожектор: тёмные края, тёплый центр
+                grad(ctx, 0, 0, w, h / 3, 0x88000000, 0x00000000);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00000000, 0x88000000);
+                fill(ctx, 0, 0, w, h, 18 + (int) (10 * Math.sin(time * 5)), 0xFF66CC);
+            }
+            case N911 -> {
+                int a = 50 + (int) (35 * Math.sin(time * 6));
+                grad(ctx, 0, 0, w, h / 4, (MathHelper.clamp(a, 0, 255) << 24) | 0xCC0000, 0x00CC0000);
+                grad(ctx, 0, h * 3 / 4, w, h, 0x00CC0000, (MathHelper.clamp(a, 0, 255) << 24) | 0xCC0000);
+            }
             case COWBOY -> {
                 fill(ctx, 0, 0, w, h, 55, 0xC8923C); // сепия
-                ctx.fillGradient(0, 0, w, h / 5, 0x66000000, 0x00000000);
-                ctx.fillGradient(0, h * 4 / 5, w, h, 0x00000000, 0x66000000);
+                grad(ctx, 0, 0, w, h / 5, 0x66000000, 0x00000000);
+                grad(ctx, 0, h * 4 / 5, w, h, 0x00000000, 0x66000000);
             }
             case NOGA -> {
                 int a = 60 + (int) (40 * Math.sin(time * 3));
-                ctx.fillGradient(0, 0, w, h / 3, (MathHelper.clamp(a, 0, 255) << 24) | 0x880000, 0x00880000);
-                ctx.fillGradient(0, h * 2 / 3, w, h, 0x00880000, (MathHelper.clamp(a, 0, 255) << 24) | 0x880000);
+                grad(ctx, 0, 0, w, h / 3, (MathHelper.clamp(a, 0, 255) << 24) | 0x880000, 0x00880000);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00880000, (MathHelper.clamp(a, 0, 255) << 24) | 0x880000);
             }
             case NATALIA -> {
                 fill(ctx, 0, 0, w, h, 40 + (int) (15 * Math.sin(time * 4)), 0x8B0000);
-                ctx.fillGradient(0, h * 2 / 3, w, h, 0x00000000, 0xAA400000);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00000000, 0xAA400000);
             }
         }
     }

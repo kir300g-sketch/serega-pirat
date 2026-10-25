@@ -59,7 +59,10 @@ public class ZombieEffect implements TrackEffect {
 
     private void spawnZombie(ServerPlayerEntity p, PlayerData d) {
         ServerWorld w = p.getServerWorld();
-        Entity e = (RNG.nextInt(10) < 7 ? EntityType.ZOMBIE : EntityType.HUSK).create(w);
+        // каждый 10-й зомби — кандидат в лучники, и с шансом 50% получает лук.
+        // Зомби в Майнкрафте стрелять не умеют, поэтому лучник — скелет в зомби-обмундировании.
+        boolean archer = RNG.nextInt(10) == 0 && RNG.nextBoolean();
+        Entity e = (archer ? EntityType.SKELETON : (RNG.nextInt(10) < 7 ? EntityType.ZOMBIE : EntityType.HUSK)).create(w);
         if (!(e instanceof MobEntity m)) return;
 
         double ang = RNG.nextDouble() * Math.PI * 2;
@@ -72,6 +75,12 @@ public class ZombieEffect implements TrackEffect {
 
         EntityAttributeInstance follow = m.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE);
         if (follow != null) follow.setBaseValue(64.0);
+        EffectUtil.randomArmor(m, RNG); // случайная броня
+        if (archer) {
+            m.equipStack(net.minecraft.entity.EquipmentSlot.MAINHAND, new net.minecraft.item.ItemStack(net.minecraft.item.Items.BOW));
+            m.setEquipmentDropChance(net.minecraft.entity.EquipmentSlot.MAINHAND, 0f);
+            m.setCustomName(net.minecraft.text.Text.literal("Зомби-лучник"));
+        }
         m.setPersistent();
         m.setTarget(p);
         w.spawnEntity(m);

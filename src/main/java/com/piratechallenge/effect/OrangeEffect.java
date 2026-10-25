@@ -40,6 +40,7 @@ public class OrangeEffect implements TrackEffect {
         d.slices = 9;
         d.eat.clear();
         EffectUtil.ensure(p, EntityAttributes.GENERIC_SCALE, EffectUtil.id("orange_scale"), -0.6, Operation.ADD_MULTIPLIED_BASE);
+        EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"), 2.0, Operation.ADD_VALUE);
     }
 
     @Override
@@ -48,6 +49,7 @@ public class OrangeEffect implements TrackEffect {
         EffectUtil.prune(w, d);
         if (elapsed % 20 == 0) {
             EffectUtil.ensure(p, EntityAttributes.GENERIC_SCALE, EffectUtil.id("orange_scale"), -0.6, Operation.ADD_MULTIPLIED_BASE);
+            EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"), 2.0, Operation.ADD_VALUE);
         }
 
         // чем дальше трек, тем больше едоков
@@ -120,6 +122,7 @@ public class OrangeEffect implements TrackEffect {
     @Override
     public void end(ServerPlayerEntity p, PlayerData d) {
         EffectUtil.remove(p, EntityAttributes.GENERIC_SCALE, EffectUtil.id("orange_scale"));
+        EffectUtil.remove(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"));
         d.eat.clear();
     }
 }

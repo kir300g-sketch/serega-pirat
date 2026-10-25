@@ -31,6 +31,9 @@ public class PirateChallenge implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(StatePayload.ID, StatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(QtePayload.ID, QtePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AmStatePayload.ID, AmStatePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(CompassPayload.ID, CompassPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(SingPayload.ID, SingPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ChessResultPayload.ID, ChessResultPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(QteResultPayload.ID, QteResultPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MovePayload.ID, MovePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SkillPayload.ID, SkillPayload.CODEC);
@@ -40,6 +43,10 @@ public class PirateChallenge implements ModInitializer {
         // ---- сеть: клиент -> сервер
         ServerPlayNetworking.registerGlobalReceiver(QteResultPayload.ID,
                 (payload, ctx) -> NogaEffect.onResult(ctx.player(), payload.success()));
+        ServerPlayNetworking.registerGlobalReceiver(SingPayload.ID,
+                (payload, ctx) -> LastPickEffect.onSing(ctx.player(), payload.singing(), payload.micOk()));
+        ServerPlayNetworking.registerGlobalReceiver(ChessResultPayload.ID,
+                (payload, ctx) -> FanatEffect.onResult(ctx.player(), payload.result()));
         ServerPlayNetworking.registerGlobalReceiver(MovePayload.ID,
                 (payload, ctx) -> AntiMageEffect.onMove(ctx.player(), new Vec3d(payload.x(), payload.y(), payload.z())));
         ServerPlayNetworking.registerGlobalReceiver(SkillPayload.ID,
