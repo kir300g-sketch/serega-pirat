@@ -40,7 +40,7 @@ public class ThiefEffect implements TrackEffect {
     public static final String ROBBED_TAG = "pc_robbed";
     private static final int STEAL_TICKS = 100; // 5 секунд
     private static final int MAX_CIVIL = 12;
-    private static final int MAX_COPS = 12;
+    private static final int MAX_COPS = 8;
     private static final Random RNG = new Random();
 
     private static final String[] PHRASES = {
@@ -203,7 +203,8 @@ public class ThiefEffect implements TrackEffect {
         if (d.wanted) return;
         d.wanted = true;
         d.stealth = 100;
-        d.nextCop = 200;
+        d.nextCop = 300;
+        d.escapeTicks = 0;
         d.stealTarget = null;
         d.stealTicks = 0;
         p.sendMessage(Text.literal("§c§lВАС СПАЛИЛИ! ПОЛИЦИЯ ВЫЕХАЛА!"), false);
@@ -216,21 +217,37 @@ public class ThiefEffect implements TrackEffect {
 
         // чем дольше в розыске, тем больше копов
         if (--d.nextCop <= 0) {
-            d.nextCop = 200;
+            d.nextCop = 300;
             if (cops.size() < MAX_COPS) spawnCop(p, d);
+        }
+
+        // оторвался от погони: все копы дальше 32 блоков 10 секунд подряд -> розыск снят
+        double minDist = 999;
+        for (VillagerEntity cop : cops) minDist = Math.min(minDist, cop.distanceTo(p));
+        if (minDist > 32) {
+            if (++d.escapeTicks >= 200) {
+                for (VillagerEntity cop : cops) cop.discard();
+                d.wanted = false;
+                d.stealth = 30;
+                d.escapeTicks = 0;
+                p.sendMessage(Text.literal("§aТы оторвался от полиции. Розыск снят."), false);
+                return;
+            }
+        } else {
+            d.escapeTicks = 0;
         }
 
         for (VillagerEntity cop : cops) {
             Vec3d dir = p.getPos().subtract(cop.getPos());
             double flatDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
             if (flatDist > 2.5) {
-                Vec3d f = new Vec3d(dir.x, 0, dir.z).normalize().multiply(0.3); // скорость ~2
+                Vec3d f = new Vec3d(dir.x, 0, dir.z).normalize().multiply(0.22); // чуть медленнее спринта игрока (0.28): убежать можно
                 double vy = (cop.horizontalCollision && cop.isOnGround()) ? 0.42 : cop.getVelocity().y;
                 cop.setVelocity(f.x, vy, f.z);
             }
             cop.lookAtEntity(p, 30f, 30f);
 
-            if (flatDist < 24 && (cop.age + cop.getId()) % 40 == 0 && cop.canSee(p)) shoot(w, cop, p);
+            if (flatDist < 16 && (cop.age + cop.getId()) % 60 == 0 && cop.canSee(p)) shoot(w, cop, p);
         }
 
         if (elapsed % 80 == 0 && !cops.isEmpty()) {
@@ -247,8 +264,8 @@ public class ThiefEffect implements TrackEffect {
             w.spawnParticles(ParticleTypes.CRIT, pt.x, pt.y, pt.z, 1, 0, 0, 0, 0);
         }
         w.playSound(null, cop.getX(), cop.getY(), cop.getZ(), SoundEvents.ENTITY_ARROW_SHOOT, SoundCategory.HOSTILE, 1.0f, 1.2f);
-        if (RNG.nextBoolean()) { // 50% попаданий
-            p.damage(p.getDamageSources().mobAttack(cop), 2.5f);
+        if (RNG.nextInt(4) == 0) { // 25% попаданий
+            p.damage(p.getDamageSources().mobAttack(cop), 2.0f);
         }
     }
 
@@ -262,7 +279,7 @@ public class ThiefEffect implements TrackEffect {
         v.addCommandTag(NataliaEffect.TAG); // «жертва» (тот же тег, что и в Наталии)
         v.setPersistent();
         w.spawnEntity(v);
-        d.spawned.add(v.getUuid());
+        EffectUtil.reg(d, v);
     }
 
     private void spawnCop(ServerPlayerEntity p, PlayerData d) {
@@ -275,7 +292,7 @@ public class ThiefEffect implements TrackEffect {
         v.setCustomNameVisible(true);
         v.setPersistent();
         w.spawnEntity(v);
-        d.spawned.add(v.getUuid());
+        EffectUtil.reg(d, v);
     }
 
     private void place(ServerPlayerEntity p, ServerWorld w, Entity e, double minD, double maxD) {

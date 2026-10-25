@@ -45,16 +45,19 @@ public class CroweEffect implements TrackEffect {
 
         if (elapsed % 100 == 20 && d.spawned.size() < MAX_BULLIES) spawnBully(p, d);
 
+        int idx = 0;
         for (UUID id : d.spawned) {
             Entity e = w.getEntity(id);
             if (!(e instanceof MobEntity bully)) continue;
             bully.setTarget(p);
             if (bully.isOnFire()) bully.extinguish();
 
+            // плевок: у каждого задиры свой тайминг (раз в 2.5 сек), нужна прямая видимость или близко
             double dist = bully.distanceTo(p);
-            if (dist < 14 && (bully.age + bully.getId()) % 50 == 0 && bully.canSee(p)) {
+            if (dist < 16 && (elapsed + idx * 17) % 50 == 0 && (dist < 6 || bully.canSee(p))) {
                 spit(w, bully, p);
             }
+            idx++;
         }
     }
 
@@ -87,7 +90,7 @@ public class CroweEffect implements TrackEffect {
         if (dmg != null) dmg.setBaseValue(0.0);
         m.setTarget(p);
         w.spawnEntity(m);
-        d.spawned.add(m.getUuid());
+        EffectUtil.reg(d, m);
     }
 
     @Override

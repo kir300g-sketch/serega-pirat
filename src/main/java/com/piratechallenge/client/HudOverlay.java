@@ -32,6 +32,52 @@ public final class HudOverlay {
             title(ctx, mc.textRenderer, t, w, h);
         }
         counter(ctx, mc.textRenderer, w);
+
+        if (t == Track.FP_AM) skillBar(ctx, mc.textRenderer, w, h);
+        if (ClientState.paused) {
+            String pause = "⏸ ПАУЗА";
+            ctx.drawCenteredTextWithShadow(mc.textRenderer, pause, w / 2, 40, 0xFFFFFF55);
+        }
+    }
+
+    /** ФП АМ: панель навыков вместо хотбара + мана + счётчик хейтеров. */
+    private static void skillBar(DrawContext ctx, TextRenderer tr, int w, int h) {
+        String[] keys = {"Q", "W", "E", "R"};
+        String[] names = {"Mana Break", "Blink", "Counterspell", "Mana Void"};
+        int[] cds = {0, ClientState.amCd1, ClientState.amCd2, ClientState.amCd3};
+        int[] colors = {0xFF5577FF, 0xFF55CCFF, 0xFFAA66FF, 0xFFFF5599};
+
+        int size = 34, gap = 6;
+        int totalW = 4 * size + 3 * gap;
+        int x0 = (w - totalW) / 2;
+        int y = h - size - 12;
+
+        // мана
+        int barW = totalW, barH = 7;
+        int by = y - 14;
+        ctx.fill(x0, by, x0 + barW, by + barH, 0xFF111122);
+        ctx.fill(x0, by, x0 + (int) (barW * ClientState.amMana / 100f), by + barH, 0xFF3366FF);
+        String mana = "Мана: " + ClientState.amMana;
+        ctx.drawCenteredTextWithShadow(tr, mana, w / 2, by - 10, 0xFF99BBFF);
+
+        for (int i = 0; i < 4; i++) {
+            int x = x0 + i * (size + gap);
+            ctx.fill(x - 1, y - 1, x + size + 1, y + size + 1, 0xFF000000);
+            ctx.fill(x, y, x + size, y + size, 0xCC1A1A2A);
+            ctx.fill(x, y, x + size, y + 3, colors[i]);
+            ctx.drawCenteredTextWithShadow(tr, keys[i], x + size / 2, y + 7, 0xFFFFFFFF);
+            ctx.drawCenteredTextWithShadow(tr, names[i], x + size / 2, y + size - 10, 0xFFCCCCCC);
+            if (i == 2 && ClientState.amCounter > 0) {
+                ctx.fill(x, y, x + size, y + size, 0x6688FFFF); // щит активен
+            }
+            if (cds[i] > 0) {
+                int fh = (int) (size * Math.min(1f, cds[i] / 400f));
+                ctx.fill(x, y + size - fh, x + size, y + size, 0xAA000000);
+                ctx.drawCenteredTextWithShadow(tr, String.valueOf(cds[i] / 20 + 1), x + size / 2, y + 14, 0xFFFFFF55);
+            }
+        }
+        String kills = "Хейтеры: " + ClientState.amKills + " / 10";
+        ctx.drawCenteredTextWithShadow(tr, kills, w / 2, 8, 0xFFFFAA55);
     }
 
     // ------------------------------------------------------------ оверлеи треков
@@ -105,6 +151,17 @@ public final class HudOverlay {
             case ORANGE -> {
                 fill(ctx, 0, 0, w, h, 100, 0xFF7A00);
                 ctx.fillGradient(0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
+            }
+            case FP_AM -> fill(ctx, 0, 0, w, h, 22, 0x2255FF);
+            case COWBOY -> {
+                fill(ctx, 0, 0, w, h, 55, 0xC8923C); // сепия
+                ctx.fillGradient(0, 0, w, h / 5, 0x66000000, 0x00000000);
+                ctx.fillGradient(0, h * 4 / 5, w, h, 0x00000000, 0x66000000);
+            }
+            case NOGA -> {
+                int a = 60 + (int) (40 * Math.sin(time * 3));
+                ctx.fillGradient(0, 0, w, h / 3, (MathHelper.clamp(a, 0, 255) << 24) | 0x880000, 0x00880000);
+                ctx.fillGradient(0, h * 2 / 3, w, h, 0x00880000, (MathHelper.clamp(a, 0, 255) << 24) | 0x880000);
             }
             case NATALIA -> {
                 fill(ctx, 0, 0, w, h, 40 + (int) (15 * Math.sin(time * 4)), 0x8B0000);

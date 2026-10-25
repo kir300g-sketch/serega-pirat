@@ -75,7 +75,7 @@ public class ZombieEffect implements TrackEffect {
         m.setPersistent();
         m.setTarget(p);
         w.spawnEntity(m);
-        d.spawned.add(m.getUuid());
+        EffectUtil.reg(d, m);
     }
 
     @Override

@@ -50,6 +50,31 @@ public class FlyEffect implements TrackEffect {
             if (e != null && e.isOnFire()) e.extinguish();
         }
 
+        // хейтеры атакуют ПООЧЕРЕДИ: 1 атакует (во второй половине трека — 2), остальные кружат вокруг
+        java.util.List<PhantomEntity> haters = new java.util.ArrayList<>();
+        for (UUID id : d.spawned) {
+            Entity e = w.getEntity(id);
+            if (e instanceof PhantomEntity ph) haters.add(ph);
+        }
+        int n = haters.size();
+        if (n > 0) {
+            int attackers = elapsed < total / 2 ? 1 : 2;
+            int base = (elapsed / 100) % n;
+            for (int i = 0; i < n; i++) {
+                PhantomEntity ph = haters.get(i);
+                boolean attacking = ((i - base + n) % n) < attackers;
+                if (attacking) {
+                    ph.setTarget(p);
+                } else {
+                    ph.setTarget(null);
+                    double a = elapsed * 0.04 + i * (Math.PI * 2 / n);
+                    double tx = p.getX() + Math.cos(a) * 14, ty = p.getY() + 4, tz = p.getZ() + Math.sin(a) * 14;
+                    net.minecraft.util.math.Vec3d dir = new net.minecraft.util.math.Vec3d(tx - ph.getX(), ty - ph.getY(), tz - ph.getZ());
+                    if (dir.lengthSquared() > 1) ph.setVelocity(dir.normalize().multiply(0.35));
+                }
+            }
+        }
+
         if (ascending) {
             p.setNoGravity(true);
             double vy = p.getY() >= MAX_ALTITUDE ? 0 : ASCENT_SPEED;
@@ -91,9 +116,8 @@ public class FlyEffect implements TrackEffect {
         ph.setCustomName(Text.literal(NAMES[RNG.nextInt(NAMES.length)]));
         ph.setPersistent();
         ph.setCustomNameVisible(true);
-        ph.setTarget(p);
         w.spawnEntity(ph);
-        d.spawned.add(ph.getUuid());
+        EffectUtil.reg(d, ph);
     }
 
     @Override

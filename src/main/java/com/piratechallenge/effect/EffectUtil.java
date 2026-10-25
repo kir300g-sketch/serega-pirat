@@ -22,6 +22,24 @@ import java.util.UUID;
 
 public final class EffectUtil {
     public static final String ITEM_TAG = "pirate_challenge_item";
+    public static final String SPAWN_TAG = "pc_spawned";
+
+    /** Регистрирует заспавненное существо: помечает тегом (для зачистки) и добавляет в список трека. */
+    public static void reg(PlayerData d, Entity e) {
+        e.addCommandTag(SPAWN_TAG);
+        d.spawned.add(e.getUuid());
+    }
+
+    /** Удаляет ВСЕХ существ, помеченных модом, во всех мирах (остатки после выхода из игры и т.п.). */
+    public static void sweep(net.minecraft.server.MinecraftServer server) {
+        for (ServerWorld w : server.getWorlds()) {
+            for (net.minecraft.entity.mob.MobEntity m : w.getEntitiesByType(
+                    net.minecraft.util.TypeFilter.instanceOf(net.minecraft.entity.mob.MobEntity.class),
+                    e -> e.getCommandTags().contains(SPAWN_TAG) || e.getCommandTags().contains("pc_serega"))) {
+                m.discard();
+            }
+        }
+    }
 
     public static Identifier id(String path) {
         return Identifier.of(PirateChallenge.MOD_ID, path);

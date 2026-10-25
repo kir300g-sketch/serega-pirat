@@ -13,19 +13,27 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.world.Heightmap;
 
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
 /**
- * Игрок — апельсин: маленькая «башка», двигается только прыжками (логика прыжков — KeyboardInputMixin).
- * 9 долек. Моб, который 3 секунды подряд стоит вплотную, съедает одну дольку. 0 долек = смерть.
- * Мобы здесь — медленные зомби с нулевым уроном, они только грызут.
+ * Игрок — апельсин: маленькая «башка», двигается только рывками (KeyboardInputMixin).
+ * 9 долек. Любой моб (и враждебный, и мирный), стоящий вплотную 3 секунды, съедает одну дольку. 0 = смерть.
+ * Мобы подходят медленно (скорость задаётся напрямую, не зависит от ИИ).
  */
 public class OrangeEffect implements TrackEffect {
     private static final Random RNG = new Random();
-    private static final int EAT_TICKS = 60; // 3 секунды
+    private static final int EAT_TICKS = 60;      // 3 секунды
+    private static final double MOB_SPEED = 0.085; // блоков в тик (~1.7 б/с) — медленнее прыжков игрока
+    private static final double RANGE = 22;
+
+    private static final List<EntityType<?>> EATERS = List.of(
+            EntityType.ZOMBIE, EntityType.HUSK, EntityType.COW, EntityType.PIG,
+            EntityType.SHEEP, EntityType.CHICKEN, EntityType.COW, EntityType.PIG);
 
     @Override
     public void start(ServerPlayerEntity p, PlayerData d) {
@@ -43,18 +51,26 @@ public class OrangeEffect implements TrackEffect {
         }
 
         // чем дальше трек, тем больше едоков
-        int cap = 5 + elapsed * 6 / Math.max(1, total);
-        if (elapsed % 60 == 0 && d.spawned.size() < cap) spawnEater(p, d);
+        int cap = 6 + elapsed * 8 / Math.max(1, total);
+        if (elapsed % 40 == 0 && d.spawned.size() < cap) spawnEater(p, d);
 
+        // ВСЕ мобы рядом (свои и случайные) идут к игроку
         boolean biting = false;
-        for (UUID id : d.spawned) {
-            Entity e = w.getEntity(id);
-            if (!(e instanceof MobEntity m)) continue;
-            m.setTarget(p);
-            if (m.isOnFire()) m.extinguish();
+        Box box = p.getBoundingBox().expand(RANGE);
+        for (MobEntity m : w.getEntitiesByClass(MobEntity.class, box, x -> x.isAlive() && !x.getCommandTags().contains("pc_serega"))) {
+            double dx = p.getX() - m.getX(), dz = p.getZ() - m.getZ();
+            double flat = Math.sqrt(dx * dx + dz * dz);
 
-            double dx = m.getX() - p.getX(), dz = m.getZ() - p.getZ();
-            boolean close = dx * dx + dz * dz < 1.7 * 1.7 && Math.abs(m.getY() - p.getY()) < 2.0;
+            if (flat > 1.2) {
+                double vy = (m.horizontalCollision && m.isOnGround()) ? 0.42 : m.getVelocity().y;
+                m.setVelocity(dx / flat * MOB_SPEED, vy, dz / flat * MOB_SPEED);
+                m.setYaw((float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0));
+                m.setHeadYaw(m.getYaw());
+            }
+            if (m.isOnFire() && m.getCommandTags().contains(EffectUtil.SPAWN_TAG)) m.extinguish();
+
+            UUID id = m.getUuid();
+            boolean close = flat < 1.7 && Math.abs(m.getY() - p.getY()) < 2.0;
             if (close) {
                 int prog = d.eat.merge(id, 1, Integer::sum);
                 biting = true;
@@ -82,28 +98,23 @@ public class OrangeEffect implements TrackEffect {
 
     private void spawnEater(ServerPlayerEntity p, PlayerData d) {
         ServerWorld w = p.getServerWorld();
-        Entity e = (RNG.nextBoolean() ? EntityType.ZOMBIE : EntityType.HUSK).create(w);
-        if (!(e instanceof ZombieEntity z)) return;
+        Entity e = EATERS.get(RNG.nextInt(EATERS.size())).create(w);
+        if (!(e instanceof MobEntity m)) return;
         double ang = RNG.nextDouble() * Math.PI * 2;
         double dist = 9 + RNG.nextDouble() * 5;
         double x = p.getX() + Math.cos(ang) * dist;
         double zz = p.getZ() + Math.sin(ang) * dist;
-        BlockPos top = w.getTopPosition(Heightmap.Type.MOTION_BLOCKING, BlockPos.ofFloored(x, 0, zz));
+        BlockPos top = w.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, BlockPos.ofFloored(x, 0, zz));
         double y = Math.abs(top.getY() - p.getY()) < 8 ? top.getY() : p.getY();
-        z.refreshPositionAndAngles(x, y, zz, 0f, 0f);
-        z.setBaby(false);
-        z.setPersistent();
-
-        EntityAttributeInstance dmg = z.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE);
-        if (dmg != null) dmg.setBaseValue(0.0);
-        EntityAttributeInstance spd = z.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
-        if (spd != null) spd.setBaseValue(0.05); // медленнее прыжков апельсина
-        EntityAttributeInstance follow = z.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE);
-        if (follow != null) follow.setBaseValue(48.0);
-
-        z.setTarget(p);
-        w.spawnEntity(z);
-        d.spawned.add(z.getUuid());
+        m.refreshPositionAndAngles(x, y, zz, 0f, 0f);
+        if (m instanceof ZombieEntity z) {
+            z.setBaby(false);
+            EntityAttributeInstance dmg = z.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE);
+            if (dmg != null) dmg.setBaseValue(0.0); // грызут только дольки
+        }
+        m.setPersistent();
+        w.spawnEntity(m);
+        EffectUtil.reg(d, m);
     }
 
     @Override

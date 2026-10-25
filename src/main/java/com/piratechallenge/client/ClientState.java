@@ -1,5 +1,6 @@
 package com.piratechallenge.client;
 
+import com.piratechallenge.AmStatePayload;
 import com.piratechallenge.ModSounds;
 import com.piratechallenge.StatePayload;
 import com.piratechallenge.Track;
@@ -13,8 +14,16 @@ public final class ClientState {
     public static int ticksLeft;
     public static int total;
     public static int listened;
+    public static boolean paused;
     /** Сколько тиков идёт текущая фаза (трек или передышка). */
     public static int age;
+
+    // ФП АМ
+    public static int amMana, amCd1, amCd2, amCd3, amCounter, amKills;
+
+    // Нога (QTE)
+    public static String qteLetters = "";
+    public static int qteTicks;
 
     private static SoundInstance sound;
 
@@ -28,8 +37,19 @@ public final class ClientState {
         ticksLeft = p.ticksLeft();
         total = p.totalTicks();
         listened = p.listened();
+
+        boolean nowPaused = p.paused();
+        if (nowPaused != paused) {
+            paused = nowPaused;
+            var sm = MinecraftClient.getInstance().getSoundManager();
+            if (paused) sm.pauseAll();
+            else sm.resumeAll();
+        }
+
         if (changed) {
             age = 0;
+            qteTicks = 0;
+            qteLetters = "";
             stopSound();
             Track t = track();
             if (t != null) {
@@ -41,9 +61,23 @@ public final class ClientState {
         }
     }
 
+    public static void updateAm(AmStatePayload p) {
+        amMana = p.mana();
+        amCd1 = p.cd1();
+        amCd2 = p.cd2();
+        amCd3 = p.cd3();
+        amCounter = p.counter();
+        amKills = p.kills();
+    }
+
     public static void tick() {
+        if (paused) return;
         age++;
         if (ticksLeft > 0) ticksLeft--;
+        if (amCd1 > 0) amCd1--;
+        if (amCd2 > 0) amCd2--;
+        if (amCd3 > 0) amCd3--;
+        if (amCounter > 0) amCounter--;
     }
 
     public static void stopSound() {
@@ -58,6 +92,9 @@ public final class ClientState {
         trackId = -1;
         ticksLeft = 0;
         age = 0;
+        paused = false;
+        qteTicks = 0;
+        qteLetters = "";
     }
 
     private ClientState() {}

@@ -1,1 +1,7 @@
-{ "item.pirate_challenge.radiance": "Radiance" }
+{
+  "item.pirate_challenge.radiance": "Radiance",
+  "item.pirate_challenge.revolver": "Revolver",
+  "item.pirate_challenge.serega_player": "Serega's Player",
+  "effect.pirate_challenge.serega_curse": "Serega Pirat's Curse",
+  "entity.pirate_challenge.serega": "Serega Pirat"
+}

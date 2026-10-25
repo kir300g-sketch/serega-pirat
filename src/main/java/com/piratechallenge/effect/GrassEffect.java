@@ -82,7 +82,7 @@ public class GrassEffect implements TrackEffect {
         if (e == null) return;
         e.refreshPositionAndAngles(x, y, z, RNG.nextFloat() * 360f, 0f);
         w.spawnEntity(e);
-        d.spawned.add(e.getUuid());
+        EffectUtil.reg(d, e);
 
         if (e instanceof MobEntity m) {
             m.setTarget(p);

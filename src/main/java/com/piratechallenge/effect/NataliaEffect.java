@@ -79,7 +79,7 @@ public class NataliaEffect implements TrackEffect {
         v.refreshPositionAndAngles(x, y, z, 0f, 0f);
         v.addCommandTag(TAG);
         w.spawnEntity(v);
-        d.spawned.add(v.getUuid());
+        EffectUtil.reg(d, v);
     }
 
     public static void onKill(ServerPlayerEntity p, LivingEntity victim) {
