@@ -32,7 +32,6 @@ public class PirateChallenge implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(QtePayload.ID, QtePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AmStatePayload.ID, AmStatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CompassPayload.ID, CompassPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(FlappyDeathPayload.ID, FlappyDeathPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SingPayload.ID, SingPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ChessResultPayload.ID, ChessResultPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(QteResultPayload.ID, QteResultPayload.CODEC);
@@ -44,8 +43,6 @@ public class PirateChallenge implements ModInitializer {
         // ---- сеть: клиент -> сервер
         ServerPlayNetworking.registerGlobalReceiver(QteResultPayload.ID,
                 (payload, ctx) -> NogaEffect.onResult(ctx.player(), payload.success()));
-        ServerPlayNetworking.registerGlobalReceiver(FlappyDeathPayload.ID,
-                (payload, ctx) -> FlappyEffect.onDeath(ctx.player(), payload.score()));
         ServerPlayNetworking.registerGlobalReceiver(SingPayload.ID,
                 (payload, ctx) -> LastPickEffect.onSing(ctx.player(), payload.singing(), payload.micOk()));
         ServerPlayNetworking.registerGlobalReceiver(ChessResultPayload.ID,
@@ -72,19 +69,10 @@ public class PirateChallenge implements ModInitializer {
             }
         });
 
-        // ---- Хрущёвки: крыши нельзя ломать
-        PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, be) ->
-                !(player instanceof ServerPlayerEntity sp && ChallengeManager.current(sp) == Track.HRUSH));
-
         // ---- урон: уклонение Радика и Counterspell
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
             if (entity instanceof ServerPlayerEntity p) {
                 Track cur = ChallengeManager.current(p);
-                // во время мини-игр (шахматы, флаппи) мобы игрока не бьют
-                if (cur != null && cur.isMiniGame()
-                        && source.getAttacker() != null && !(source.getAttacker() instanceof net.minecraft.entity.player.PlayerEntity)) {
-                    return false;
-                }
                 if (cur == Track.TP_NA_AME && p.getMainHandStack().isOf(ModItems.RADIANCE)
                         && p.getRandom().nextFloat() < 0.25f) {
                     return false;

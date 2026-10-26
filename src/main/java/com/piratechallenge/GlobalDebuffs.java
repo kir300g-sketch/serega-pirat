@@ -18,27 +18,18 @@ public final class GlobalDebuffs {
 
     public static final List<Debuff> ALL = List.of(
             new Debuff(5, "Апатия",
-                    "Регулярное слушание сереги пирата заставляет вас чувствовать себя хуево. Двигаться и копать тяжелее.",
+                    "Регулярное слушание сереги пирата заставляет вас чувствовать себя хуево.",
                     (p, on) -> {
                         if (on) {
+                            EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_DAMAGE, EffectUtil.id("apathy_damage"), -1.5, Operation.ADD_VALUE);
                             EffectUtil.ensure(p, EntityAttributes.GENERIC_MOVEMENT_SPEED, EffectUtil.id("apathy_speed"), -0.15, Operation.ADD_MULTIPLIED_TOTAL);
-                            EffectUtil.ensure(p, EntityAttributes.PLAYER_BLOCK_BREAK_SPEED, EffectUtil.id("apathy_dig"), -0.3, Operation.ADD_MULTIPLIED_TOTAL);
                         } else {
+                            EffectUtil.remove(p, EntityAttributes.GENERIC_ATTACK_DAMAGE, EffectUtil.id("apathy_damage"));
                             EffectUtil.remove(p, EntityAttributes.GENERIC_MOVEMENT_SPEED, EffectUtil.id("apathy_speed"));
-                            EffectUtil.remove(p, EntityAttributes.PLAYER_BLOCK_BREAK_SPEED, EffectUtil.id("apathy_dig"));
                         }
                     }),
             new Debuff(10, "Депрессия",
                     "Вас накрывает депрессия. Навязчивые мысли будут посещать вас всё чаще.",
-                    (p, on) -> {}),
-            new Debuff(15, "Тихий угол",
-                    "Музыка душит. У стен вы прижимаетесь и зажимаете уши — так тише.",
-                    (p, on) -> {}),
-            new Debuff(20, "Безумие",
-                    "Вы начинаете слышать то, чего нет. Мысли путаются.",
-                    (p, on) -> {}),
-            new Debuff(25, "Паранойя",
-                    "Вам кажется, что кто-то за спиной. Слуховые галлюцинации учащаются.",
                     (p, on) -> {})
     );
 

@@ -32,9 +32,6 @@ public class ChallengeSave extends PersistentState {
             PlayerData d = new PlayerData();
             d.listened = c.getInt("listened");
             d.cursed = c.getBoolean("cursed");
-            d.sanctionTracks = c.getInt("sanctions");
-            int[] pl = c.getIntArray("plays");
-            System.arraycopy(pl, 0, d.plays, 0, Math.min(pl.length, d.plays.length));
             d.dialogDone = c.getBoolean("dialogDone");
             for (int i : c.getIntArray("played")) d.played.add(i);
             s.players.put(UUID.fromString(key), d);
@@ -49,8 +46,6 @@ public class ChallengeSave extends PersistentState {
             NbtCompound c = new NbtCompound();
             c.putInt("listened", e.getValue().listened);
             c.putBoolean("cursed", e.getValue().cursed);
-            c.putInt("sanctions", e.getValue().sanctionTracks);
-            c.putIntArray("plays", e.getValue().plays);
             c.putBoolean("dialogDone", e.getValue().dialogDone);
             c.putIntArray("played", e.getValue().played.stream().mapToInt(Integer::intValue).toArray());
             ps.put(e.getKey().toString(), c);

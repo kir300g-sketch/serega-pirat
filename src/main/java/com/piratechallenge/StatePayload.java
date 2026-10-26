@@ -23,11 +23,6 @@ public record StatePayload(int trackId, int ticksLeft, int totalTicks, int liste
         return (flags & 1) != 0;
     }
 
-    /** Сколько треков ещё действуют санкции (0..15). */
-    public int sanctions() {
-        return (flags >> 4) & 15;
-    }
-
     /** Вступление трека (настройка микрофона): музыка ещё не играет. */
     public boolean intro() {
         return (flags & 2) != 0;

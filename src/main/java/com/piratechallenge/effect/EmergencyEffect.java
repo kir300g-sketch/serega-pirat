@@ -84,8 +84,7 @@ public class EmergencyEffect implements TrackEffect {
 
         p.requestTeleport(c.getX() + 0.5, c.getY() + 1.0, c.getZ() - 5.5);
         d.kills = 0;
-        d.round = 0;
-        d.roundActive = false;
+        d.target = null;
         d.duelWait = 80;
         p.sendMessage(Text.literal("§cАрена смерти! Бой один на один. Победи как можно больше."), false);
     }
@@ -112,73 +111,29 @@ public class EmergencyEffect implements TrackEffect {
             p.requestTeleport(c.getX() + 0.5, c.getY() + 1.0, c.getZ() - 5.5);
         }
 
-        EffectUtil.prune(w, d);
-
-        if (d.roundActive) {
-            if (d.spawned.isEmpty()) { // раунд пройден
-                d.roundActive = false;
-                d.round++;
-                d.kills = d.round;
-                d.duelWait = 100;
-                p.heal(8.0f);
-                p.sendMessage(Text.literal("§aРаунд " + d.round + " пройден! Следующий через 5 секунд."), true);
-                return;
-            }
-            // враги активны: рывки, прыжки и обходы, а не просто стоят и бьются
-            if (elapsed % 10 == 0) {
-                int idx = 0;
-                for (java.util.UUID id : d.spawned) {
-                    Entity e = w.getEntity(id);
-                    if (!(e instanceof MobEntity m)) continue;
-                    m.setTarget(p);
-                    behave(m, p, elapsed + idx * 7, d.round);
-                    idx++;
-                }
-            }
+        Entity opp = d.target == null ? null : w.getEntity(d.target);
+        if (d.target != null && (opp == null || !opp.isAlive())) {
+            d.target = null;
+            d.kills++;
+            d.duelWait = 100;
+            p.heal(8.0f);
+            p.sendMessage(Text.literal("§aПобеда #" + d.kills + "! Следующий бой через 5 секунд."), true);
             return;
         }
-
-        if (--d.duelWait <= 0) startRound(p, w, c, d);
-    }
-
-    /** До 5-го раунда — по одному бойцу; начиная с 6-го — толпа (раунд−3, максимум 9). */
-    private void startRound(ServerPlayerEntity p, ServerWorld w, BlockPos c, PlayerData d) {
-        int r = d.round;
-        int count = r < 5 ? 1 : Math.min(9, r - 3);
-        for (int i = 0; i < count; i++) spawnOpponent(p, w, c, d, i, count);
-        d.roundActive = true;
-        EffectUtil.bar(p, count == 1 ? "§cБой #" + (r + 1) + "!" : "§c§lРаунд " + (r + 1) + ": врагов — " + count + "!");
-    }
-
-    private void behave(MobEntity m, ServerPlayerEntity p, int t, int round) {
-        double dist = m.distanceTo(p);
-        double dx = p.getX() - m.getX(), dz = p.getZ() - m.getZ();
-        double len = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
-        double nx = dx / len, nz = dz / len;
-        double rate = Math.max(2, 5 - round / 3); // чем дальше, тем чаще манёвры (в десятках тиков)
-
-        if (dist > 3 && (t / 10) % rate == 0) {
-            m.setVelocity(nx * 0.75, 0.25, nz * 0.75);          // рывок к игроку
-            m.velocityModified = true;
-        } else if (dist <= 3.5 && (t / 10) % (rate + 1) == 0) {
-            double side = ((t / 10) & 1) == 0 ? 1 : -1;         // обход сбоку
-            m.setVelocity(-nz * 0.6 * side, 0.22, nx * 0.6 * side);
-            m.velocityModified = true;
-        } else if (m.isOnGround() && (t / 10) % 4 == 1) {
-            m.setVelocity(m.getVelocity().x, 0.42, m.getVelocity().z); // прыжок
+        if (d.target == null) {
+            if (--d.duelWait <= 0) spawnOpponent(p, w, c, d);
+            return;
         }
+        if (elapsed % 20 == 0 && opp instanceof MobEntity m) m.setTarget(p);
     }
 
-    private void spawnOpponent(ServerPlayerEntity p, ServerWorld w, BlockPos c, PlayerData d, int i, int count) {
+    private void spawnOpponent(ServerPlayerEntity p, ServerWorld w, BlockPos c, PlayerData d) {
         Entity e = FIGHTERS.get(RNG.nextInt(FIGHTERS.size())).create(w);
         if (!(e instanceof MobEntity m)) return;
-        int n = d.round;
-        double ang = (Math.PI * 2 / Math.max(1, count)) * i + RNG.nextDouble() * 0.4;
-        double radius = count == 1 ? 6.0 : 7.5;
-        m.refreshPositionAndAngles(c.getX() + 0.5 + Math.cos(ang) * radius * 0.9, c.getY() + 1,
-                c.getZ() + 0.5 + Math.sin(ang) * radius * 0.9, 180f, 0f);
+        int n = d.kills;
+        m.refreshPositionAndAngles(c.getX() + 0.5, c.getY() + 1, c.getZ() + 5.5, 180f, 0f);
 
-        // броня растёт с раундами: кожа -> кольчуга -> железо -> алмаз -> незерит
+        // броня растёт с победами: кожа -> кольчуга -> железо -> алмаз -> незерит
         net.minecraft.item.Item[][] tiers = {
                 {Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS, Items.LEATHER_BOOTS},
                 {Items.CHAINMAIL_HELMET, Items.CHAINMAIL_CHESTPLATE, Items.CHAINMAIL_LEGGINGS, Items.CHAINMAIL_BOOTS},
@@ -187,33 +142,27 @@ public class EmergencyEffect implements TrackEffect {
                 {Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS}};
         int tier = Math.min(4, n / 2);
         EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-        for (int k = 0; k < 4; k++) {
-            m.equipStack(slots[k], new ItemStack(tiers[tier][k]));
-            m.setEquipmentDropChance(slots[k], 0f);
+        for (int i = 0; i < 4; i++) {
+            m.equipStack(slots[i], new ItemStack(tiers[tier][i]));
+            m.setEquipmentDropChance(slots[i], 0f);
         }
         if (!(e.getType() == EntityType.SKELETON || e.getType() == EntityType.STRAY || e.getType() == EntityType.PILLAGER)) {
             m.equipStack(EquipmentSlot.MAINHAND, new ItemStack(tier >= 3 ? Items.DIAMOND_SWORD : Items.IRON_SWORD));
             m.setEquipmentDropChance(EquipmentSlot.MAINHAND, 0f);
         }
-        double hpv = 20 + n * 3;
         EntityAttributeInstance hp = m.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH);
-        if (hp != null) { hp.setBaseValue(hpv); m.setHealth((float) hpv); }
-        EntityAttributeInstance dmg = m.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE);
-        if (dmg != null) dmg.setBaseValue(Math.max(dmg.getBaseValue(), 3.0) + Math.min(6, n * 0.5));
-        // активность: Скорость растёт с раундом
-        int speedAmp = Math.min(2, n / 4);
-        m.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
-                net.minecraft.entity.effect.StatusEffects.SPEED, 20 * 600, speedAmp, false, false));
-        if (n >= 8) {
-            m.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
-                    net.minecraft.entity.effect.StatusEffects.STRENGTH, 20 * 600, Math.min(2, (n - 8) / 3), false, false));
+        if (hp != null) {
+            hp.setBaseValue(20 + n * 4);
+            m.setHealth((float) (20 + n * 4));
         }
-        m.setCustomName(Text.literal("§cБоец"));
+        m.setCustomName(Text.literal("§cБоец #" + (n + 1)));
         m.setCustomNameVisible(true);
         m.setPersistent();
         m.setTarget(p);
         w.spawnEntity(m);
         EffectUtil.reg(d, m);
+        d.target = m.getUuid();
+        EffectUtil.bar(p, "§cБой #" + (n + 1) + "!");
     }
 
     @Override
@@ -227,7 +176,7 @@ public class EmergencyEffect implements TrackEffect {
         if (p.isAlive() && d.returnPos != null) {
             Vec3d r = d.returnPos;
             p.requestTeleport(r.x, r.y, r.z);
-            p.sendMessage(Text.literal("§7Раундов пройдено: " + d.round), false);
+            p.sendMessage(Text.literal("§7Побед на арене: " + d.kills), false);
         }
     }
 }

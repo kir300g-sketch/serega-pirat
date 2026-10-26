@@ -15,21 +15,20 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
 /**
- * Меню «Плеера Серёги» (сундук 9x4).
+ * Меню «Плеера Серёги» (сундук 9x3).
  * Ряд 1–2: все треки (клик = включить). Ряд 3: пауза/пуск, стоп, пропуск, авто-цикл,
  * сбросить счётчик, проклятие вкл/выкл, перезапуск интро-диалога.
  */
 public final class PlayerGui {
-    private static final int TRACK_SLOTS = 27;
-    private static final int CTRL_PAUSE = 28, CTRL_STOP = 29, CTRL_SKIP = 30, CTRL_AUTO = 31,
-            CTRL_RESET = 32, CTRL_CURSE = 33, CTRL_INTRO = 34;
+    private static final int CTRL_PAUSE = 19, CTRL_STOP = 20, CTRL_SKIP = 21, CTRL_AUTO = 22,
+            CTRL_RESET = 23, CTRL_CURSE = 24, CTRL_INTRO = 25;
 
     public static boolean isAdmin(ServerPlayerEntity p) {
         return p.hasPermissionLevel(2) || p.getServer().isSingleplayer();
     }
 
     public static void open(ServerPlayerEntity sp) {
-        SimpleInventory inv = new SimpleInventory(36);
+        SimpleInventory inv = new SimpleInventory(27);
         fill(inv, sp);
         sp.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, playerInv, player) -> new Handler(syncId, playerInv, inv, sp),
@@ -45,10 +44,10 @@ public final class PlayerGui {
 
     static void fill(SimpleInventory inv, ServerPlayerEntity sp) {
         PlayerData d = ChallengeManager.data(sp);
-        for (int i = 0; i < 36; i++) inv.setStack(i, ItemStack.EMPTY);
+        for (int i = 0; i < 27; i++) inv.setStack(i, ItemStack.EMPTY);
 
         Track[] all = Track.values();
-        for (int i = 0; i < all.length && i < TRACK_SLOTS; i++) {
+        for (int i = 0; i < all.length && i < 18; i++) {
             Track t = all[i];
             boolean now = d.current == t;
             int s = t.seconds;
@@ -67,7 +66,7 @@ public final class PlayerGui {
     static void click(ServerPlayerEntity sp, int slot) {
         PlayerData d = ChallengeManager.data(sp);
         Track[] all = Track.values();
-        if (slot < all.length && slot < TRACK_SLOTS) {
+        if (slot < all.length && slot < 18) {
             ChallengeManager.adminPlay(sp, all[slot]);
             return;
         }
@@ -79,7 +78,6 @@ public final class PlayerGui {
             case CTRL_RESET -> {
                 d.listened = 0;
                 d.played.clear();
-                java.util.Arrays.fill(d.plays, 0);
                 ChallengeSave.get(sp.getServer()).markDirty();
             }
             case CTRL_CURSE -> {
@@ -102,14 +100,14 @@ public final class PlayerGui {
         private final ServerPlayerEntity owner;
 
         Handler(int syncId, PlayerInventory playerInv, SimpleInventory inv, ServerPlayerEntity owner) {
-            super(ScreenHandlerType.GENERIC_9X4, syncId, playerInv, inv, 4);
+            super(ScreenHandlerType.GENERIC_9X3, syncId, playerInv, inv, 3);
             this.inv = inv;
             this.owner = owner;
         }
 
         @Override
         public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
-            if (slotIndex >= 0 && slotIndex < 36) {
+            if (slotIndex >= 0 && slotIndex < 27) {
                 if (player instanceof ServerPlayerEntity sp) click(sp, slotIndex);
                 fill(inv, owner);
                 sendContentUpdates();

@@ -57,16 +57,7 @@ public enum Track {
             138, 0xFF3333),
     FANAT("fanat", "Почему ты ещё не фанат?",
             "Шахматная партия против Хикару Накамуры (бот)! Играете белыми. Ходите мышкой.",
-            164, 0xDDDDDD),
-    GEY("gey", "Гей",
-            "На вас наложена санкция на 3 трека вперёд (РФ, ст. 6.21). Прячьтесь от «настоящих мужиков»: они гоняют вас и пишут, что вы «не мужик».",
-            168, 0xFF77CC),
-    FLAPPY("oshibatsya", "Я не боюсь ошибаться",
-            "Серёга не боялся — и ты не бойся! Флаппи Бёрд на весь трек: одна смерть птицы — минус сердце. Мобы вас не трогают.",
-            172, 0xFFDD33),
-    HRUSH("prazdnik", "Извини, сегодня праздник",
-            "Вы высоко над землёй на крышах хрущёвок! Дома рушатся позади вас — стоять нельзя. Чем дальше, тем сложнее.",
-            199, 0xFF9944);
+            164, 0xDDDDDD);
 
     public final String soundId;
     public final String title;
@@ -82,11 +73,6 @@ public enum Track {
         this.description = description;
         this.seconds = seconds;
         this.color = color;
-    }
-
-    /** Мини-игры на весь экран: мобы игрока в это время не бьют. */
-    public boolean isMiniGame() {
-        return this == FANAT || this == FLAPPY;
     }
 
     public static Track byId(int id) {
