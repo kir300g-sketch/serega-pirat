@@ -4,6 +4,7 @@ import com.piratechallenge.AmStatePayload;
 import com.piratechallenge.CompassPayload;
 import com.piratechallenge.SingPayload;
 import com.piratechallenge.ModEntities;
+import com.piratechallenge.ModeSelectPayload;
 import com.piratechallenge.QtePayload;
 import com.piratechallenge.StatePayload;
 import com.piratechallenge.Track;
@@ -39,6 +40,11 @@ public class PirateChallengeClient implements ClientModInitializer {
                     ClientState.qteTicks = payload.ticks();
                 }));
 
+        ClientPlayNetworking.registerGlobalReceiver(ModeSelectPayload.ID,
+                (payload, context) -> context.client().execute(() -> {
+                    var mc = context.client();
+                    if (!(mc.currentScreen instanceof ModeScreen)) mc.setScreen(new ModeScreen());
+                }));
         ClientPlayNetworking.registerGlobalReceiver(CompassPayload.ID,
                 (payload, context) -> context.client().execute(() -> ClientState.updateCompass(payload)));
 
@@ -85,6 +91,15 @@ public class PirateChallengeClient implements ClientModInitializer {
                 mc.setScreen(new ChessScreen());
             }
         } else if (mc.currentScreen instanceof ChessScreen && t != Track.FANAT) {
+            mc.setScreen(null);
+        }
+
+        // Тильт: экран-перехватчик (персонаж не слушается)
+        if (t == Track.TILT && !ClientState.paused) {
+            if (mc.currentScreen == null && Util.getMeasuringTimeMs() >= TiltScreen.reopenAtMs) {
+                mc.setScreen(new TiltScreen());
+            }
+        } else if (mc.currentScreen instanceof TiltScreen && t != Track.TILT) {
             mc.setScreen(null);
         }
 

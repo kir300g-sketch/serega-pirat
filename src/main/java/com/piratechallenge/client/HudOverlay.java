@@ -229,6 +229,38 @@ public final class HudOverlay {
                 grad(ctx, 0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
             }
             case FP_AM -> fill(ctx, 0, 0, w, h, 22, 0x2255FF);
+            case CHINA -> {
+                // бамбуковый туман + туннельное зрение: края затемнены ступенями, остаётся небольшое «окно» в центре
+                fill(ctx, 0, 0, w, h, 55, 0xCFE8D0);
+                int steps = 12;
+                for (int i = 0; i < steps; i++) {
+                    float f = i / (float) steps;
+                    int a = 235 - i * 14;
+                    // кольцо толщиной в один шаг между внешней и внутренней рамкой
+                    int ox = (int) (w * 0.5f * f * 0.62f), oy = (int) (h * 0.5f * f * 0.62f);
+                    int nx = (int) (w * 0.5f * (i + 1) / steps * 0.62f), ny = (int) (h * 0.5f * (i + 1) / steps * 0.62f);
+                    int c = (Math.max(a, 0) << 24) | 0x0A1208;
+                    ctx.fill(ox, oy, w - ox, ny, c);              // верх
+                    ctx.fill(ox, h - ny, w - ox, h - oy, c);      // низ
+                    ctx.fill(ox, ny, nx, h - ny, c);              // лево
+                    ctx.fill(w - nx, ny, w - ox, h - ny, c);      // право
+                }
+                // самый край — почти чёрный
+                ctx.fill(0, 0, w, (int) (h * 0.02f), 0xFF050805);
+                ctx.fill(0, h - (int) (h * 0.02f), w, h, 0xFF050805);
+                ctx.fill(0, 0, (int) (w * 0.02f), h, 0xFF050805);
+                ctx.fill(w - (int) (w * 0.02f), 0, w, h, 0xFF050805);
+            }
+            case TILT -> {
+                fill(ctx, 0, 0, w, h, 60, 0x555555);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00000000, 0x77000000);
+            }
+            case APOCALYPSE -> {
+                int pulse = (int) (22 * Math.sin(time * 7) + 22 * Math.sin(time * 3.1));
+                fill(ctx, 0, 0, w, h, 70 + pulse, 0xFF3300);
+                grad(ctx, 0, 0, w, h / 2, 0xBB000000, 0x00000000);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00FF2200, 0x99FF2200);
+            }
             case GEY -> {
                 // мягкая радужная вуаль
                 int stripes = 6;

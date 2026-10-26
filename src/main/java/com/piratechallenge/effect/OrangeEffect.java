@@ -29,7 +29,7 @@ public class OrangeEffect implements TrackEffect {
     private static final Random RNG = new Random();
     private static final int EAT_TICKS = 60;      // 3 секунды
     private static final double MOB_SPEED = 0.085; // блоков в тик (~1.7 б/с) — медленнее прыжков игрока
-    private static final double RANGE = 22;
+    private static final double RANGE = 14;
 
     private static final List<EntityType<?>> EATERS = List.of(
             EntityType.ZOMBIE, EntityType.HUSK, EntityType.COW, EntityType.PIG,
@@ -40,7 +40,7 @@ public class OrangeEffect implements TrackEffect {
         d.slices = 9;
         d.eat.clear();
         EffectUtil.ensure(p, EntityAttributes.GENERIC_SCALE, EffectUtil.id("orange_scale"), -0.6, Operation.ADD_MULTIPLIED_BASE);
-        EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"), 2.0, Operation.ADD_VALUE);
+        EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"), 5.0, Operation.ADD_VALUE);
     }
 
     @Override
@@ -49,12 +49,12 @@ public class OrangeEffect implements TrackEffect {
         EffectUtil.prune(w, d);
         if (elapsed % 20 == 0) {
             EffectUtil.ensure(p, EntityAttributes.GENERIC_SCALE, EffectUtil.id("orange_scale"), -0.6, Operation.ADD_MULTIPLIED_BASE);
-            EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"), 2.0, Operation.ADD_VALUE);
+            EffectUtil.ensure(p, EntityAttributes.GENERIC_ATTACK_KNOCKBACK, EffectUtil.id("orange_knockback"), 5.0, Operation.ADD_VALUE);
         }
 
         // чем дальше трек, тем больше едоков
-        int cap = 6 + elapsed * 8 / Math.max(1, total);
-        if (elapsed % 40 == 0 && d.spawned.size() < cap) spawnEater(p, d);
+        int cap = 3 + elapsed * 4 / Math.max(1, total);
+        if (elapsed % 90 == 0 && d.spawned.size() < cap) spawnEater(p, d);
 
         // ВСЕ мобы рядом (свои и случайные) идут к игроку
         boolean biting = false;

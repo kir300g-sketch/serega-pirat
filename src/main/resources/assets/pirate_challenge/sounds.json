@@ -158,5 +158,29 @@
         "stream": true
       }
     ]
+  },
+  "china": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:china",
+        "stream": true
+      }
+    ]
+  },
+  "tilt": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:tilt",
+        "stream": true
+      }
+    ]
+  },
+  "konec_sveta": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:konec_sveta",
+        "stream": true
+      }
+    ]
   }
 }

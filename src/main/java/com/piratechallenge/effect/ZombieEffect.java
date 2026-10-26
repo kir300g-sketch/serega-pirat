@@ -21,9 +21,9 @@ public class ZombieEffect implements TrackEffect {
     private static final Random RNG = new Random();
 
     // настройки волн: как часто спавним (тики), сколько за раз, максимум живых
-    private static final int[] INTERVAL = {100, 50, 30};
-    private static final int[] BATCH = {2, 3, 5};
-    private static final int[] CAP = {15, 35, 70};
+    private static final int[] INTERVAL = {70, 40, 25};
+    private static final int[] BATCH = {3, 4, 6};
+    private static final int[] CAP = {28, 65, 120};
 
     @Override
     public void start(ServerPlayerEntity p, PlayerData d) {}
@@ -43,6 +43,30 @@ public class ZombieEffect implements TrackEffect {
 
         if (elapsed % INTERVAL[wave] == 0) {
             for (int i = 0; i < BATCH[wave] && d.spawned.size() < CAP[wave]; i++) spawnZombie(p, d);
+        }
+
+        // зомби ломают преграды на пути и лезут по стенам/деревьям, так что спрятаться наверху нельзя
+        if (elapsed % 6 == 0) {
+            for (UUID id : d.spawned) {
+                Entity e = w.getEntity(id);
+                if (!(e instanceof MobEntity m) || m.squaredDistanceTo(p) > 24 * 24) continue;
+                double dx = p.getX() - m.getX(), dz = p.getZ() - m.getZ();
+                double flat = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
+                double nx = dx / flat, nz = dz / flat;
+
+                if (m.horizontalCollision || (p.getY() > m.getY() + 1.5 && flat < 4)) {
+                    // ломаем блоки перед собой (на уровне ног и головы) и над головой
+                    net.minecraft.util.math.BlockPos f0 = net.minecraft.util.math.BlockPos.ofFloored(m.getX() + nx * 0.9, m.getY() + 0.4, m.getZ() + nz * 0.9);
+                    digBlock(w, f0);
+                    digBlock(w, f0.up());
+                    if (p.getY() > m.getY() + 1.5) digBlock(w, m.getBlockPos().up(2));
+                    // лезем вверх по препятствию
+                    if (p.getY() > m.getY() + 0.5) {
+                        m.setVelocity(nx * 0.05, 0.36, nz * 0.05);
+                        m.velocityModified = true;
+                    }
+                }
+            }
         }
 
         // зомби всегда нацелены на игрока, не горят на солнце
@@ -85,6 +109,14 @@ public class ZombieEffect implements TrackEffect {
         m.setTarget(p);
         w.spawnEntity(m);
         EffectUtil.reg(d, m);
+    }
+
+    private static void digBlock(ServerWorld w, net.minecraft.util.math.BlockPos pos) {
+        net.minecraft.block.BlockState st = w.getBlockState(pos);
+        if (st.isAir() || !st.getFluidState().isEmpty()) return;
+        float h = st.getHardness(w, pos);
+        if (h < 0 || h > 12) return; // не ломаем бедрок и обсидиан
+        w.breakBlock(pos, false);
     }
 
     @Override

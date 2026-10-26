@@ -50,7 +50,7 @@ public class HrushEffect implements TrackEffect {
 
         // стартовая крыша: длинная и без препятствий
         build(w, d, d.pkStartX, 22, baseY, 0);
-        d.pkNextX = d.pkStartX + 22 + 2;
+        d.pkNextX = d.pkStartX + 22;
         ensureAhead(w, d, d.pkStartX + 90);
 
         p.requestTeleport(d.pkStartX + 3.5, baseY + 1.0, d.pkZ + 0.5);
@@ -66,7 +66,7 @@ public class HrushEffect implements TrackEffect {
         ensureAhead(w, d, (int) p.getX() + 90);
 
         // фронт обрушения ускоряется: ~1 → ~2.6 блока/сек
-        d.pkFront += 0.05 + 0.08 * progress;
+        d.pkFront += 0.07 + 0.11 * progress;
         while (d.pkCleared < (int) d.pkFront) {
             collapseSlice(w, d, ++d.pkCleared);
         }
@@ -102,21 +102,52 @@ public class HrushEffect implements TrackEffect {
 
     // ---------------------------------------------------------------- строительство
 
-    /** Достраиваем здания вперёд до нужной координаты. Сложность растёт с номером здания. */
+    /** Достраиваем здания вперёд. Разрывы растут до 14 блоков, но через каждые ≤3 блока ставятся блоки-ступени. */
     private void ensureAhead(ServerWorld w, PlayerData d, int untilX) {
         while (d.pkNextX < untilX) {
             double diff = Math.min(1.0, d.pkCount / 22.0);
-            int gap = 2 + (int) Math.round(diff * 3) + (RNG.nextInt(3) == 0 ? 1 : 0); // 2..6
-            int len = 16 - (int) Math.round(diff * 9) + RNG.nextInt(3);               // 16 -> ~7
-            int dy = RNG.nextInt(4) - 2;                                               // -2..+1
-            if (dy > 1) dy = 1;
+            int gap = 2 + (int) Math.round(diff * 11) + RNG.nextInt(2);   // 2 .. 14
+            gap = Math.min(gap, 14);
+            int len = 16 - (int) Math.round(diff * 9) + RNG.nextInt(3);   // 16 -> ~7
+            int dy = RNG.nextInt(3) - 1;                                  // -1..+1 (больше +1 не допрыгнуть)
             int y = d.pkRoofY + dy;
             y = Math.max(d.pkBaseY - 8, Math.min(d.pkBaseY + 8, y));
             int obstacles = (int) Math.round(diff * 5);
+            len = Math.max(6, len);
 
-            build(w, d, d.pkNextX, Math.max(6, len), y, obstacles);
-            d.pkNextX += Math.max(6, len) + gap;
+            // ступени в разрыве: пока один прыжок > 4 блоков, ставим платформы 2x2 через каждые ~3 блока
+            if (gap > 4) {
+                int stones = (int) Math.ceil(gap / 4.0) - 1;         // сколько платформ нужно
+                int step = gap / (stones + 1);                        // шаг между краями платформ (<=4)
+                int sx = d.pkNextX;
+                int sy = d.pkRoofY;
+                for (int k = 1; k <= stones; k++) {
+                    int px = sx + step * k - 1;
+                    int py = sy + RNG.nextInt(3) - 1;
+                    py = Math.max(d.pkBaseY - 8, Math.min(d.pkBaseY + 8, py));
+                    placeStone(w, d, px, py);
+                    sy = py;
+                }
+                y = Math.max(y, 0);
+                y = Math.min(y, sy + 1); // последняя платформа -> крыша: подъём не больше +1
+            }
+
+            build(w, d, d.pkNextX + gap, len, y, obstacles);
+            d.pkNextX += gap + len;
         }
+    }
+
+    private void placeStone(ServerWorld w, PlayerData d, int x, int y) {
+        int z0 = d.pkZ;
+        for (int dx = 0; dx < 2; dx++) {
+            for (int dz = -1; dz <= 0; dz++) {
+                BlockPos pos = new BlockPos(x + dx, y, z0 + dz);
+                w.setBlockState(pos, Blocks.POLISHED_ANDESITE.getDefaultState(), Block.NOTIFY_LISTENERS);
+                w.setBlockState(pos.up(), Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+                w.setBlockState(pos.up(2), Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
+            }
+        }
+        d.pkMaxX = Math.max(d.pkMaxX, x + 2);
     }
 
     private void build(ServerWorld w, PlayerData d, int x0, int len, int roofY, int obstacles) {

@@ -22,7 +22,7 @@ import net.minecraft.text.Text;
 public final class PlayerGui {
     private static final int TRACK_SLOTS = 27;
     private static final int CTRL_PAUSE = 28, CTRL_STOP = 29, CTRL_SKIP = 30, CTRL_AUTO = 31,
-            CTRL_RESET = 32, CTRL_CURSE = 33, CTRL_INTRO = 34;
+            CTRL_RESET = 32, CTRL_CURSE = 33, CTRL_INTRO = 34, CTRL_MODE = 35;
 
     public static boolean isAdmin(ServerPlayerEntity p) {
         return p.hasPermissionLevel(2) || p.getServer().isSingleplayer();
@@ -61,6 +61,8 @@ public final class PlayerGui {
         inv.setStack(CTRL_AUTO, named(Items.LEVER, "§fАвто-цикл: " + (d.auto ? "§aВКЛ" : "§cВЫКЛ"), d.auto));
         inv.setStack(CTRL_RESET, named(Items.PAPER, "§fСбросить счётчик треков (сейчас: " + d.listened + ")", false));
         inv.setStack(CTRL_CURSE, named(Items.WITHER_SKELETON_SKULL, "§4Проклятие: " + (d.cursed ? "§aЕСТЬ §7(клик — снять)" : "§cНЕТ §7(клик — наложить)"), d.cursed));
+        inv.setStack(CTRL_MODE, named(Items.COMPARATOR,
+                "§fРежим: " + (d.mode == 1 ? "§aОБЫЧНЫЙ §7(раз в 1.5 мин)" : (d.mode == 2 ? "§cХАРД §7(раз в 30 сек)" : "§7не выбран")) + " §7(клик — сменить)", false));
         inv.setStack(CTRL_INTRO, named(Items.BOOK, "§dПерезапустить интро-диалог с Серёгой", false));
     }
 
@@ -92,6 +94,7 @@ public final class PlayerGui {
                     ChallengeSave.get(sp.getServer()).markDirty();
                 }
             }
+            case CTRL_MODE -> DialogueManager.setMode(sp, d.mode != 2);
             case CTRL_INTRO -> DialogueManager.restart(sp, d);
             default -> {}
         }

@@ -39,7 +39,11 @@ public final class DialogueManager {
     }
 
     public static void tick(ServerPlayerEntity p, PlayerData d) {
-        if (d.dialogDone) return;
+        if (d.dialogDone) {
+            // режим ещё не выбран (старые сохранения) — через пару секунд после входа показываем выбор
+            if (d.mode == 0 && d.dialogTimer > 0 && --d.dialogTimer == 0) askMode(p);
+            return;
+        }
         ServerWorld w = p.getServerWorld();
 
         Entity npc = d.seregaId == null ? null : w.getEntity(d.seregaId);
@@ -115,10 +119,26 @@ public final class DialogueManager {
             removeNpc(p, d);
             d.dialogDone = true;
             d.dialogStage = 4;
-            d.restLeft = ChallengeManager.REST_TICKS;
-            p.sendMessage(Text.literal("§7Первый трек начнётся через 30 секунд..."), false);
+            d.restLeft = ChallengeManager.restTicks(d);
+            askMode(p);
             ChallengeSave.get(p.getServer()).markDirty();
         }
+    }
+
+    public static void askMode(ServerPlayerEntity p) {
+        p.sendMessage(Text.literal("§7Выбери режим — от него зависит, как часто будут играть треки."), false);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new ModeSelectPayload(0));
+    }
+
+    public static void setMode(ServerPlayerEntity p, boolean hard) {
+        PlayerData d = ChallengeManager.data(p);
+        d.mode = hard ? 2 : 1;
+        d.restLeft = Math.min(d.restLeft, ChallengeManager.restTicks(d));
+        if (d.current == null) d.restLeft = ChallengeManager.restTicks(d);
+        ChallengeSave.get(p.getServer()).markDirty();
+        p.sendMessage(Text.literal(hard
+                ? "§cХАРД: трек раз в 30 секунд. Удачи."
+                : "§aОБЫЧНЫЙ: трек раз в 1,5 минуты."), false);
     }
 
     private static void strike(ServerWorld w, double x, double y, double z) {

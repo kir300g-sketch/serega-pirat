@@ -44,6 +44,14 @@ public final class ChallengeManager {
         EFFECTS.put(Track.GEY, new GeyEffect());
         EFFECTS.put(Track.FLAPPY, new FlappyEffect());
         EFFECTS.put(Track.HRUSH, new HrushEffect());
+        EFFECTS.put(Track.CHINA, new ChinaEffect());
+        EFFECTS.put(Track.TILT, new TiltEffect());
+        EFFECTS.put(Track.APOCALYPSE, new ApocalypseEffect());
+    }
+
+    /** Пауза между треками: обычный режим — 1.5 минуты, хард (или режим не выбран) — 30 секунд. */
+    public static int restTicks(PlayerData d) {
+        return d.mode == 1 ? 90 * 20 : REST_TICKS;
     }
 
     public static PlayerData data(ServerPlayerEntity p) {
@@ -69,11 +77,11 @@ public final class ChallengeManager {
             ServerPlayerEntity p = handler.player;
             PlayerData d = ChallengeSave.get(server).get(p.getUuid());
             d.current = null;
-            d.restLeft = REST_TICKS;
+            d.restLeft = restTicks(d);
             d.paused = false;
             d.dialogStage = 0;
             d.seregaId = null;
-            d.dialogTimer = d.dialogDone ? 0 : 100;
+            d.dialogTimer = d.dialogDone ? (d.mode == 0 ? 60 : 0) : 100;
             if (!anyActive(server)) EffectUtil.sweep(server); // убираем остатки прошлой сессии
             sync(p, d);
         });
@@ -82,12 +90,19 @@ public final class ChallengeManager {
             ServerPlayerEntity p = handler.player;
             PlayerData d = ChallengeSave.get(server).get(p.getUuid());
             if (d.current != null) finish(p, d, false);
+            Vision.cancel(p, d);
         });
 
         // Смерть прерывает трек (он не засчитывается)
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (entity instanceof ServerPlayerEntity p) {
                 PlayerData d = data(p);
+                if (d.cursed) {
+                    d.deaths++;
+                    d.pendingTaunt = true;
+                    ChallengeSave.get(p.getServer()).markDirty();
+                }
+                Vision.cancel(p, d);
                 if (d.current != null) finish(p, d, false);
             }
         });
@@ -106,6 +121,12 @@ public final class ChallengeManager {
             }
             if (!p.isAlive()) continue;
 
+            if (d.pendingTaunt) {          // насмешка Серёги после возрождения
+                d.pendingTaunt = false;
+                Taunts.send(p, d.deaths);
+            }
+            Vision.tick(p, d);
+
             if (d.cursed && d.listened >= 10 && --d.thoughtTimer <= 0) {
                 d.thoughtTimer = Thoughts.nextDelayTicks(d.listened);
                 Thoughts.send(p, d.listened);
@@ -122,7 +143,7 @@ public final class ChallengeManager {
             }
 
             if (d.current == null) {
-                if (!d.cursed || !d.auto) continue;
+                if (!d.cursed || !d.auto || d.mode == 0) continue;
                 if (--d.restLeft <= 0) startTrack(p, d, null);
                 else if (d.restLeft % 20 == 0) sync(p, d);
             } else {
@@ -135,6 +156,9 @@ public final class ChallengeManager {
                 }
                 if (d.listened >= 15 && p.age % 5 == 0) WallCover.check(p, d);
                 EFFECTS.get(d.current).tick(p, d, elapsed, d.totalTicks);
+                if (d.current != null && d.current != Track.GEY && d.sanctionTracks > 0 && Men.allowedOn(d.current)) {
+                    Men.tick(p, d, elapsed, d.totalTicks, 6);
+                }
                 if (d.current == null) continue; // эффект мог сам завершить игру (смерть)
                 if (--d.ticksLeft <= 0) finish(p, d, true);
                 else if (d.ticksLeft % 20 == 0) sync(p, d);
@@ -179,11 +203,12 @@ public final class ChallengeManager {
         if (t == null) return;
         EFFECTS.get(t).end(p, d);
         EffectUtil.discardSpawned(p, d);
+        Men.clear(p, d);
         EffectUtil.clearTaggedDrops(p); // выброшенные/выпавшие выданные предметы
         d.intro = false;
         d.coverEars = false;
         d.current = null;
-        d.restLeft = REST_TICKS;
+        d.restLeft = restTicks(d);
 
         if (completed) {
             d.played.add(t.ordinal());
@@ -206,7 +231,7 @@ public final class ChallengeManager {
         if (p.networkHandler == null || !p.networkHandler.isConnectionOpen()) return;
         int id = d.current == null ? -1 : d.current.ordinal();
         int left = d.current == null ? d.restLeft : d.ticksLeft;
-        int total = d.current == null ? REST_TICKS : d.totalTicks;
+        int total = d.current == null ? restTicks(d) : d.totalTicks;
         int flags = (d.paused ? 1 : 0) | (d.intro ? 2 : 0) | (d.coverEars ? 4 : 0) | (Math.min(15, d.sanctionTracks) << 4);
         ServerPlayNetworking.send(p, new StatePayload(id, left, total, d.listened, flags));
     }

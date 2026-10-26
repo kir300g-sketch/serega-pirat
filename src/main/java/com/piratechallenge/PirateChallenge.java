@@ -32,6 +32,9 @@ public class PirateChallenge implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(QtePayload.ID, QtePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AmStatePayload.ID, AmStatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CompassPayload.ID, CompassPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(ModeSelectPayload.ID, ModeSelectPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(ModeChoicePayload.ID, ModeChoicePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(TiltAttemptPayload.ID, TiltAttemptPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(FlappyDeathPayload.ID, FlappyDeathPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SingPayload.ID, SingPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ChessResultPayload.ID, ChessResultPayload.CODEC);
@@ -44,6 +47,10 @@ public class PirateChallenge implements ModInitializer {
         // ---- сеть: клиент -> сервер
         ServerPlayNetworking.registerGlobalReceiver(QteResultPayload.ID,
                 (payload, ctx) -> NogaEffect.onResult(ctx.player(), payload.success()));
+        ServerPlayNetworking.registerGlobalReceiver(ModeChoicePayload.ID,
+                (payload, ctx) -> DialogueManager.setMode(ctx.player(), payload.hard()));
+        ServerPlayNetworking.registerGlobalReceiver(TiltAttemptPayload.ID,
+                (payload, ctx) -> TiltEffect.onAttempt(ctx.player()));
         ServerPlayNetworking.registerGlobalReceiver(FlappyDeathPayload.ID,
                 (payload, ctx) -> FlappyEffect.onDeath(ctx.player(), payload.score()));
         ServerPlayNetworking.registerGlobalReceiver(SingPayload.ID,
@@ -106,6 +113,7 @@ public class PirateChallenge implements ModInitializer {
                 }
                 if (tags.contains(AntiMageEffect.TAG)) AntiMageEffect.onKill(p, entity);
                 if (tags.contains(CowboyEffect.THIEF_TAG)) CowboyEffect.onKill(p, entity);
+                if (tags.contains(ChinaEffect.TAG)) ChinaEffect.onKill(p, entity);
             }
             if (entity instanceof EnderDragonEntity && entity.getWorld() instanceof ServerWorld sw) {
                 for (ServerPlayerEntity pl : sw.getPlayers()) DialogueManager.lift(pl);

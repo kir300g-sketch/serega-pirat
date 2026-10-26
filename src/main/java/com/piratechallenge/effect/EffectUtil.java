@@ -83,11 +83,21 @@ public final class EffectUtil {
         p.sendMessage(Text.literal(text), true);
     }
 
-    /** Удаляет выброшенные на землю выданные предметы рядом с игроком (после смерти и т.п.). */
+    /**
+     * Удаляет ВСЕ выданные модом предметы, которые могли «утечь»: выброшенные на землю в любом месте загруженного мира
+     * (в том числе упавшие вниз с арены), а также из эндер-сундука игрока.
+     */
     public static void clearTaggedDrops(ServerPlayerEntity p) {
-        for (net.minecraft.entity.ItemEntity ie : p.getServerWorld().getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
-                p.getBoundingBox().expand(10), e -> isTagged(e.getStack()))) {
-            ie.discard();
+        for (ServerWorld w : p.getServer().getWorlds()) {
+            for (net.minecraft.entity.ItemEntity ie : w.getEntitiesByType(
+                    net.minecraft.util.TypeFilter.instanceOf(net.minecraft.entity.ItemEntity.class),
+                    e -> isTagged(e.getStack()))) {
+                ie.discard();
+            }
+        }
+        net.minecraft.inventory.Inventory ender = p.getEnderChestInventory();
+        for (int i = 0; i < ender.size(); i++) {
+            if (isTagged(ender.getStack(i))) ender.setStack(i, ItemStack.EMPTY);
         }
     }
 

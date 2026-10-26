@@ -186,7 +186,7 @@ public class ChessScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderBackground(ctx, mouseX, mouseY, delta);
+        super.render(ctx, mouseX, mouseY, delta); // рисует фон и кнопку; доска — поверх
         int cs = cell(), bx = boardX(), by = boardY();
         var tr = this.textRenderer;
 
@@ -243,7 +243,5 @@ public class ChessScreen extends Screen {
         ctx.drawCenteredTextWithShadow(tr, "Ты (белые)", this.width / 2, by + 8 * cs + 8, 0xFFFFFFFF);
         ctx.drawTextWithShadow(tr, status, 10, 10, finished ? 0xFFFFEE55 : 0xFFFFFFFF);
         ctx.drawTextWithShadow(tr, "Трек идёт — партия тоже", 10, 24, 0xFFE0F0FF);
-
-        super.render(ctx, mouseX, mouseY, delta);
     }
 }

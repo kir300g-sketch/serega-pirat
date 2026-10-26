@@ -9,6 +9,8 @@ public class PlayerData {
     public boolean cursed;      // «Проклятие Сереги Пирата» — пока оно есть, идёт челлендж
     public boolean dialogDone;  // интро-диалог пройден
     public int listened;
+    public int deaths;                         // смерти (для насмешек Серёги)
+    public int mode;                           // 0 не выбран, 1 обычный (трек раз в 1.5 мин), 2 хард (раз в 30 сек)
     public int sanctionTracks;                 // «санкции» (трек «Гей»): сколько треков ещё действуют
     public final int[] plays = new int[64];    // сколько раз прослушан каждый трек (для честного рандома)
     public final Set<Integer> played = new HashSet<>();
@@ -21,6 +23,12 @@ public class PlayerData {
     public boolean paused;
     public boolean auto = true;
     public Track lastTrack;
+    public boolean pendingTaunt;
+    public int visionTimer = 20 * 150;
+    public int visionTicks;
+    public final java.util.List<UUID> visionIds = new ArrayList<>();
+    public final java.util.List<UUID> men = new ArrayList<>();      // «настоящие мужики» (санкции)
+    public final Map<UUID, Integer> menLost = new HashMap<>();
     public int hallTimer = 20 * 60;
 
     // ---- диалог со Серёгой ----
@@ -69,6 +77,13 @@ public class PlayerData {
     public int singTicks, lastSingTick, micState; // micState: 0 неизвестно, 1 есть, 2 нет
     public boolean coverEars;
     public boolean coverNotified;
+    // Тильт
+    public int tiltPhase, tiltAttempts, tiltLastAttempt, tiltBotTimer;
+    public net.minecraft.util.math.BlockPos botTarget;
+    // Апокалипсис
+    public final java.util.List<double[]> meteors = new ArrayList<>();
+    public final java.util.List<double[]> nukes = new ArrayList<>();
+    public int nukeTimer;
     // 911: раунды
     public int round;
     public boolean roundActive;
@@ -105,6 +120,14 @@ public class PlayerData {
         reload = 0;
         horseId = null;
         heading = 0;
+        tiltPhase = 0;
+        tiltAttempts = 0;
+        tiltLastAttempt = 0;
+        tiltBotTimer = 0;
+        botTarget = null;
+        meteors.clear();
+        nukes.clear();
+        nukeTimer = 0;
         round = 0;
         roundActive = false;
         pkStartX = pkNextX = pkRoofY = pkBaseY = pkCount = pkZ = pkCleared = pkMaxX = 0;
