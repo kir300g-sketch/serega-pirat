@@ -88,6 +88,15 @@ public class PirateChallengeClient implements ClientModInitializer {
             mc.setScreen(null);
         }
 
+        // Флаппи Бёрд: на весь экран до конца трека
+        if (t == Track.FLAPPY && !ClientState.paused) {
+            if (mc.currentScreen == null && Util.getMeasuringTimeMs() >= FlappyScreen.reopenAtMs) {
+                mc.setScreen(new FlappyScreen());
+            }
+        } else if (mc.currentScreen instanceof FlappyScreen && t != Track.FLAPPY) {
+            mc.setScreen(null);
+        }
+
         // Нога: комбинация букв
         if (ClientState.qteTicks > 0 && !ClientState.qteLetters.isEmpty() && !(mc.currentScreen instanceof QteScreen)) {
             mc.setScreen(new QteScreen());

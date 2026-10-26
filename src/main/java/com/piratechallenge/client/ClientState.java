@@ -26,6 +26,7 @@ public final class ClientState {
 
     public static boolean intro;
     public static boolean coverEars;
+    public static int sanctions;
 
     // Ковбой: стрелка на ближайшего вора
     public static boolean cmpValid;
@@ -46,6 +47,7 @@ public final class ClientState {
 
         intro = p.intro();
         coverEars = p.coverEars();
+        sanctions = p.sanctions();
         if (sound != null) sound.setTargetVolume(coverEars ? 0.15f : 1.0f);
 
         boolean nowPaused = p.paused();
@@ -121,6 +123,7 @@ public final class ClientState {
         qteLetters = "";
         intro = false;
         coverEars = false;
+        sanctions = 0;
         cmpValid = false;
     }
 

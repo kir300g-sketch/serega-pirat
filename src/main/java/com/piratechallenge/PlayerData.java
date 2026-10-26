@@ -9,6 +9,8 @@ public class PlayerData {
     public boolean cursed;      // «Проклятие Сереги Пирата» — пока оно есть, идёт челлендж
     public boolean dialogDone;  // интро-диалог пройден
     public int listened;
+    public int sanctionTracks;                 // «санкции» (трек «Гей»): сколько треков ещё действуют
+    public final int[] plays = new int[64];    // сколько раз прослушан каждый трек (для честного рандома)
     public final Set<Integer> played = new HashSet<>();
 
     // ---- состояние на время сессии ----
@@ -18,6 +20,8 @@ public class PlayerData {
     public boolean hangover;
     public boolean paused;
     public boolean auto = true;
+    public Track lastTrack;
+    public int hallTimer = 20 * 60;
 
     // ---- диалог со Серёгой ----
     public int dialogStage, dialogTimer, dialogChoice;
@@ -65,6 +69,13 @@ public class PlayerData {
     public int singTicks, lastSingTick, micState; // micState: 0 неизвестно, 1 есть, 2 нет
     public boolean coverEars;
     public boolean coverNotified;
+    // 911: раунды
+    public int round;
+    public boolean roundActive;
+    // Хрущёвки (паркур)
+    public int pkStartX, pkNextX, pkRoofY, pkBaseY, pkCount, pkZ, pkCleared, pkMaxX, flappyCool;
+    public double pkFront;
+    public final java.util.List<int[]> roofs = new java.util.ArrayList<>();
     // Нога
     public boolean qteActive;
     public int qteLeft, nextQte;
@@ -94,6 +105,11 @@ public class PlayerData {
         reload = 0;
         horseId = null;
         heading = 0;
+        round = 0;
+        roundActive = false;
+        pkStartX = pkNextX = pkRoofY = pkBaseY = pkCount = pkZ = pkCleared = pkMaxX = 0;
+        pkFront = 0;
+        roofs.clear();
         returnPos = null;
         arenaCenter = null;
         arenaHalf = 0;

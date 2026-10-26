@@ -39,6 +39,10 @@ public final class HudOverlay {
         if (t == Track.FP_AM) skillBar(ctx, mc.textRenderer, w, h);
         if (t == Track.LASTPICK) micUi(ctx, mc.textRenderer, w, h);
         if (t == Track.COWBOY && ClientState.cmpValid) thiefArrow(ctx, mc, w, h);
+        if (ClientState.sanctions > 0) {
+            String sanc = "⚠ Санкции (ст. 6.21): " + ClientState.sanctions + " тр.";
+            ctx.drawTextWithShadow(mc.textRenderer, sanc, 6, 6, 0xFFFF5555);
+        }
         if (t != null && ClientState.coverEars) {
             ctx.drawCenteredTextWithShadow(mc.textRenderer, "Ты зажал уши...", w / 2, h - 90, 0xFFAAAAAA);
         }
@@ -225,6 +229,18 @@ public final class HudOverlay {
                 grad(ctx, 0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
             }
             case FP_AM -> fill(ctx, 0, 0, w, h, 22, 0x2255FF);
+            case GEY -> {
+                // мягкая радужная вуаль
+                int stripes = 6;
+                int[] rainbow = {0xFF0000, 0xFF8800, 0xFFEE00, 0x22CC22, 0x2288FF, 0xAA44FF};
+                for (int i = 0; i < stripes; i++) {
+                    fill(ctx, 0, i * h / stripes, w, (i + 1) * h / stripes, 34 + (int) (10 * Math.sin(time * 2 + i)), rainbow[i]);
+                }
+            }
+            case HRUSH -> {
+                fill(ctx, 0, 0, w, h, 26, 0xFF9944);                     // тёплый закат
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00000000, 0x55442200);
+            }
             case LASTPICK -> {
                 // прожектор: тёмные края, тёплый центр
                 grad(ctx, 0, 0, w, h / 3, 0x88000000, 0x00000000);
