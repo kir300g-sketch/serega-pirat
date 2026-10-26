@@ -41,6 +41,9 @@ public final class ChallengeManager {
         EFFECTS.put(Track.LASTPICK, new LastPickEffect());
         EFFECTS.put(Track.N911, new EmergencyEffect());
         EFFECTS.put(Track.FANAT, new FanatEffect());
+        EFFECTS.put(Track.GEY, new GeyEffect());
+        EFFECTS.put(Track.FLAPPY, new FlappyEffect());
+        EFFECTS.put(Track.HRUSH, new HrushEffect());
     }
 
     public static PlayerData data(ServerPlayerEntity p) {
@@ -104,9 +107,14 @@ public final class ChallengeManager {
             if (!p.isAlive()) continue;
 
             if (d.cursed && d.listened >= 10 && --d.thoughtTimer <= 0) {
-                d.thoughtTimer = Thoughts.nextDelayTicks();
-                Thoughts.send(p);
+                d.thoughtTimer = Thoughts.nextDelayTicks(d.listened);
+                Thoughts.send(p, d.listened);
             }
+            if (d.cursed && d.listened >= 20 && --d.hallTimer <= 0) {
+                d.hallTimer = Thoughts.nextHallDelayTicks(d.listened);
+                Thoughts.hallucinate(p);
+            }
+            Sanctions.apply(p, d);
 
             if (d.paused) {
                 if (p.age % 20 == 0) sync(p, d);
@@ -119,6 +127,12 @@ public final class ChallengeManager {
                 else if (d.restLeft % 20 == 0) sync(p, d);
             } else {
                 int elapsed = d.totalTicks - d.ticksLeft;
+                if (d.current.isMiniGame() && p.age % 20 == 0) {
+                    for (net.minecraft.entity.mob.MobEntity m : p.getServerWorld().getEntitiesByClass(
+                            net.minecraft.entity.mob.MobEntity.class, p.getBoundingBox().expand(32), x -> x.getTarget() == p)) {
+                        m.setTarget(null);
+                    }
+                }
                 if (d.listened >= 15 && p.age % 5 == 0) WallCover.check(p, d);
                 EFFECTS.get(d.current).tick(p, d, elapsed, d.totalTicks);
                 if (d.current == null) continue; // эффект мог сам завершить игру (смерть)
@@ -131,16 +145,20 @@ public final class ChallengeManager {
     private static void startTrack(ServerPlayerEntity p, PlayerData d, Track forced) {
         Track t = forced;
         if (t == null) {
+            // «мешок» по счётчикам: выбираем среди треков, которые слушали реже всего (новые треки = 0 прослушиваний),
+            // и не повторяем предыдущий подряд. Старые и новые треки получают равные шансы.
+            int min = Integer.MAX_VALUE;
+            for (Track x : Track.values()) min = Math.min(min, d.plays[x.ordinal()]);
             List<Track> pool = new ArrayList<>();
-            for (Track x : Track.values()) if (!d.played.contains(x.ordinal())) pool.add(x);
-            if (pool.isEmpty()) { // все треки отыграли — новый круг
-                d.played.clear();
-                pool.addAll(List.of(Track.values()));
-            }
-            t = pool.get(p.getRandom().nextInt(pool.size()));
+            for (Track x : Track.values()) if (d.plays[x.ordinal()] == min) pool.add(x);
+            if (pool.size() > 1 && d.lastTrack != null) pool.remove(d.lastTrack);
+            t = pool.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(pool.size()));
         }
+        Track lastForNext = t;
+        d.lastTrack = null;
 
         d.resetRuntime();
+        d.lastTrack = lastForNext;
         d.current = t;
         d.totalTicks = t.seconds * 20;
         d.ticksLeft = d.totalTicks;
@@ -169,7 +187,9 @@ public final class ChallengeManager {
 
         if (completed) {
             d.played.add(t.ordinal());
+            d.plays[t.ordinal()]++;
             d.listened++;
+            if (t != Track.GEY && d.sanctionTracks > 0) d.sanctionTracks--;
             for (GlobalDebuffs.Debuff debuff : GlobalDebuffs.ALL) {
                 if (d.listened == debuff.threshold()) {
                     p.sendMessage(Text.literal("[" + debuff.name() + "] " + debuff.description()).formatted(Formatting.RED), false);
@@ -187,7 +207,7 @@ public final class ChallengeManager {
         int id = d.current == null ? -1 : d.current.ordinal();
         int left = d.current == null ? d.restLeft : d.ticksLeft;
         int total = d.current == null ? REST_TICKS : d.totalTicks;
-        int flags = (d.paused ? 1 : 0) | (d.intro ? 2 : 0) | (d.coverEars ? 4 : 0);
+        int flags = (d.paused ? 1 : 0) | (d.intro ? 2 : 0) | (d.coverEars ? 4 : 0) | (Math.min(15, d.sanctionTracks) << 4);
         ServerPlayNetworking.send(p, new StatePayload(id, left, total, d.listened, flags));
     }
 

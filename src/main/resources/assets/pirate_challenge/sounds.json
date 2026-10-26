@@ -134,5 +134,29 @@
         "stream": true
       }
     ]
+  },
+  "gey": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:gey",
+        "stream": true
+      }
+    ]
+  },
+  "oshibatsya": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:oshibatsya",
+        "stream": true
+      }
+    ]
+  },
+  "prazdnik": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:prazdnik",
+        "stream": true
+      }
+    ]
   }
 }

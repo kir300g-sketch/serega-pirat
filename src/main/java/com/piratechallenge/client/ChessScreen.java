@@ -180,7 +180,8 @@ public class ChessScreen extends Screen {
 
     @Override
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, this.width, this.height, 0xEE1B1B1F);
+        // яркий сине-голубой фон вместо тёмного
+        ctx.fillGradient(0, 0, this.width, this.height, 0xFF3E6FB0, 0xFF8FC1F2);
     }
 
     @Override
@@ -189,25 +190,36 @@ public class ChessScreen extends Screen {
         int cs = cell(), bx = boardX(), by = boardY();
         var tr = this.textRenderer;
 
+        // рамка доски
+        ctx.fill(bx - 6, by - 6, bx + 8 * cs + 6, by + 8 * cs + 6, 0xFFFFE9A8);
+        ctx.fill(bx - 3, by - 3, bx + 8 * cs + 3, by + 8 * cs + 3, 0xFF5A3B1A);
+
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 int sq = r * 8 + c;
                 boolean light = (r + c) % 2 == 0;
-                int col = light ? 0xFFEEEED2 : 0xFF769656;
-                if (sq == lastFrom || sq == lastTo) col = light ? 0xFFF7EC74 : 0xFFD7C94A;
-                if (sq == sel) col = 0xFFFFE066;
+                int col = light ? 0xFFFFF1CC : 0xFFE0953F;   // яркие: кремовый и апельсиновый
+                if (sq == lastFrom || sq == lastTo) col = light ? 0xFFFFFF66 : 0xFFFFD022;
+                if (sq == sel) col = 0xFF66FF66;
                 ctx.fill(bx + c * cs, by + r * cs, bx + (c + 1) * cs, by + (r + 1) * cs, col);
             }
+        }
+        // подписи линий и рядов
+        for (int c = 0; c < 8; c++) {
+            ctx.drawText(tr, String.valueOf((char) ('a' + c)), bx + c * cs + cs - 8, by + 8 * cs - 10, 0xFF4A2E10, false);
+        }
+        for (int r = 0; r < 8; r++) {
+            ctx.drawText(tr, String.valueOf(8 - r), bx + 2, by + r * cs + 2, 0xFF4A2E10, false);
         }
         // подсказки ходов
         for (Move m : targets) {
             int r = m.to() / 8, c = m.to() % 8;
-            int cx = bx + c * cs + cs / 2, cy = by + r * cs + cs / 2, rad = Math.max(3, cs / 7);
-            ctx.fill(cx - rad, cy - rad, cx + rad, cy + rad, 0x88000000);
+            int cx = bx + c * cs + cs / 2, cy = by + r * cs + cs / 2, rad = Math.max(4, cs / 6);
+            ctx.fill(cx - rad, cy - rad, cx + rad, cy + rad, 0xCC1E8E1E);
         }
-        // фигуры
+        // фигуры: белые — белые с чёрным контуром, чёрные — тёмные с белым контуром (хорошо видны на любой клетке)
         MatrixStack ms = ctx.getMatrices();
-        float scale = cs / 9.5f;
+        float scale = cs / 9.0f;
         for (int i = 0; i < 64; i++) {
             int v = this.pos.b[i];
             if (v == 0) continue;
@@ -216,19 +228,21 @@ public class ChessScreen extends Screen {
             ms.push();
             ms.translate(bx + c * cs + cs / 2f - 4f * scale, by + r * cs + cs / 2f - 4.5f * scale, 0);
             ms.scale(scale, scale, 1f);
-            if (v > 0) {
-                ctx.drawText(tr, g, 1, 1, 0xFF000000, false);   // белые: светлая фигура с тёмной тенью
-                ctx.drawText(tr, g, 0, 0, 0xFFFFFFFF, false);
-            } else {
-                ctx.drawText(tr, g, 0, 0, 0xFF111111, false);
+            int outline = v > 0 ? 0xFF000000 : 0xFFFFFFFF;
+            int fill = v > 0 ? 0xFFFFFFFF : 0xFF000000;
+            for (int ox = -1; ox <= 1; ox++) {
+                for (int oy = -1; oy <= 1; oy++) {
+                    if (ox != 0 || oy != 0) ctx.drawText(tr, g, ox, oy, outline, false);
+                }
             }
+            ctx.drawText(tr, g, 0, 0, fill, false);
             ms.pop();
         }
-        // подписи сторон
-        ctx.drawCenteredTextWithShadow(tr, "Хикару Накамура (бот)", this.width / 2, Math.max(4, by - 12), 0xFFFFFFFF);
-        ctx.drawCenteredTextWithShadow(tr, "Ты (белые)", this.width / 2, by + 8 * cs + 4, 0xFFFFFFFF);
-        ctx.drawTextWithShadow(tr, status, 10, 10, finished ? 0xFFFFDD55 : 0xFFFFFFFF);
-        ctx.drawTextWithShadow(tr, "Трек идёт — партия тоже", 10, 24, 0xFF999999);
+        // подписи сторон и статус
+        ctx.drawCenteredTextWithShadow(tr, "Хикару Накамура (бот)", this.width / 2, Math.max(4, by - 16), 0xFFFFFFFF);
+        ctx.drawCenteredTextWithShadow(tr, "Ты (белые)", this.width / 2, by + 8 * cs + 8, 0xFFFFFFFF);
+        ctx.drawTextWithShadow(tr, status, 10, 10, finished ? 0xFFFFEE55 : 0xFFFFFFFF);
+        ctx.drawTextWithShadow(tr, "Трек идёт — партия тоже", 10, 24, 0xFFE0F0FF);
 
         super.render(ctx, mouseX, mouseY, delta);
     }
