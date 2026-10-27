@@ -32,6 +32,11 @@ public class PirateChallenge implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(QtePayload.ID, QtePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AmStatePayload.ID, AmStatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CompassPayload.ID, CompassPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(FlowerStatePayload.ID, FlowerStatePayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(AbilityPayload.ID, AbilityPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BambooPayload.ID, BambooPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(HymnPayload.ID, HymnPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BambooResultPayload.ID, BambooResultPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ModeSelectPayload.ID, ModeSelectPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(ModeChoicePayload.ID, ModeChoicePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(TiltAttemptPayload.ID, TiltAttemptPayload.CODEC);
@@ -47,6 +52,10 @@ public class PirateChallenge implements ModInitializer {
         // ---- сеть: клиент -> сервер
         ServerPlayNetworking.registerGlobalReceiver(QteResultPayload.ID,
                 (payload, ctx) -> NogaEffect.onResult(ctx.player(), payload.success()));
+        ServerPlayNetworking.registerGlobalReceiver(AbilityPayload.ID,
+                (payload, ctx) -> FlowerEffect.onAbility(ctx.player(), payload.id()));
+        ServerPlayNetworking.registerGlobalReceiver(BambooResultPayload.ID,
+                (payload, ctx) -> ChinaEffect.onResult(ctx.player(), payload.hits(), payload.total()));
         ServerPlayNetworking.registerGlobalReceiver(ModeChoicePayload.ID,
                 (payload, ctx) -> DialogueManager.setMode(ctx.player(), payload.hard()));
         ServerPlayNetworking.registerGlobalReceiver(TiltAttemptPayload.ID,
@@ -85,6 +94,13 @@ public class PirateChallenge implements ModInitializer {
 
         // ---- урон: уклонение Радика и Counterspell
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+            // видения гимна (призрачные драконы и Серёги) никому не вредят
+            var srcE = source.getSource();
+            var atkE = source.getAttacker();
+            if ((srcE != null && srcE.getCommandTags().contains(HymnManager.GHOST_TAG))
+                    || (atkE != null && atkE.getCommandTags().contains(HymnManager.GHOST_TAG))) {
+                return false;
+            }
             if (entity instanceof ServerPlayerEntity p) {
                 Track cur = ChallengeManager.current(p);
                 // во время мини-игр (шахматы, флаппи) мобы игрока не бьют
@@ -113,9 +129,9 @@ public class PirateChallenge implements ModInitializer {
                 }
                 if (tags.contains(AntiMageEffect.TAG)) AntiMageEffect.onKill(p, entity);
                 if (tags.contains(CowboyEffect.THIEF_TAG)) CowboyEffect.onKill(p, entity);
-                if (tags.contains(ChinaEffect.TAG)) ChinaEffect.onKill(p, entity);
             }
-            if (entity instanceof EnderDragonEntity && entity.getWorld() instanceof ServerWorld sw) {
+            if (entity instanceof EnderDragonEntity && !entity.getCommandTags().contains(HymnManager.GHOST_TAG)
+                    && entity.getWorld() instanceof ServerWorld sw) {
                 for (ServerPlayerEntity pl : sw.getPlayers()) DialogueManager.lift(pl);
             }
         });

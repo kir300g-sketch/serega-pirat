@@ -113,20 +113,42 @@ public class TiltEffect implements TrackEffect {
             }
             return;
         }
-        // добыча: ближайшее дерево, иначе блуждание
-        if (d.botTarget == null || !isLog(w, d.botTarget) || (elapsed % 200 == 0)) {
-            d.botTarget = findLog(w, p.getBlockPos());
+        // добыча: ближайшее достижимое дерево, иначе блуждание
+        boolean needTarget = d.botTarget == null || (!isLog(w, d.botTarget) && d.botTarget.getSquaredDistance(p.getPos()) < 9);
+        if (needTarget || elapsed % 300 == 0) {
+            d.botTarget = findLog(w, p.getBlockPos(), d);
+            d.bestDist = 1e9;
+            d.stuckTicks = 0;
             if (d.botTarget == null) {
                 double ang = RNG.nextDouble() * Math.PI * 2;
                 d.botTarget = p.getBlockPos().add((int) (Math.cos(ang) * 14), 0, (int) (Math.sin(ang) * 14));
             }
         }
         Vec3d t = Vec3d.ofCenter(d.botTarget);
-        double dist = moveToward(p, t, 2.6);
-        if (isLog(w, d.botTarget) && dist < 3.8 && elapsed % 12 == 0) {
-            w.breakBlock(d.botTarget, true, p);
-            p.swingHand(Hand.MAIN_HAND);
-            d.botTarget = null;
+        boolean log = isLog(w, d.botTarget);
+        double eyeDist = p.getEyePos().distanceTo(t);
+
+        if (log && eyeDist < 4.6) {
+            // дошёл — рубит (стоит на месте)
+            p.setVelocity(0, p.getVelocity().y, 0);
+            if (elapsed % 10 == 0) {
+                w.breakBlock(d.botTarget, true, p);
+                p.swingHand(Hand.MAIN_HAND);
+                d.botTarget = null;
+            }
+        } else {
+            double flat = moveToward(p, t, log ? 1.2 : 1.5);
+            // застрял (не приближается 2 секунды) — выкидываем цель и берём другую
+            if (flat < d.bestDist - 0.05) {
+                d.bestDist = flat;
+                d.stuckTicks = 0;
+            } else if (++d.stuckTicks >= 40) {
+                if (d.botTarget != null) d.botBlack.add(d.botTarget.asLong());
+                d.botTarget = null;
+                d.stuckTicks = 0;
+                d.bestDist = 1e9;
+            }
+            if (!log && flat < 2.0) d.botTarget = null; // дошёл до точки блуждания
         }
         if (elapsed % 400 == 0) {
             p.sendMessage(Text.literal("§7[Персонаж] §f" + BOT[RNG.nextInt(BOT.length)]), false);
@@ -138,24 +160,24 @@ public class TiltEffect implements TrackEffect {
         return s.isIn(BlockTags.LOGS);
     }
 
-    private static BlockPos findLog(ServerWorld w, BlockPos around) {
+    /** Ближайшее бревно, до которого реально дойти: не выше +4 и не ниже −2 от ног, не из «чёрного списка». */
+    private static BlockPos findLog(ServerWorld w, BlockPos around, PlayerData d) {
         BlockPos best = null;
         double bd = Double.MAX_VALUE;
-        for (int dx = -18; dx <= 18; dx += 1) {
-            for (int dz = -18; dz <= 18; dz += 1) {
-                for (int dy = -3; dy <= 8; dy++) {
+        for (int dx = -20; dx <= 20; dx++) {
+            for (int dz = -20; dz <= 20; dz++) {
+                for (int dy = -2; dy <= 4; dy++) {
                     BlockPos pos = around.add(dx, dy, dz);
-                    if (isLog(w, pos)) {
-                        double dd = pos.getSquaredDistance(around);
-                        if (dd < bd) { bd = dd; best = pos; }
-                    }
+                    if (!isLog(w, pos) || d.botBlack.contains(pos.asLong())) continue;
+                    double dd = pos.getSquaredDistance(around);
+                    if (dd < bd) { bd = dd; best = pos; }
                 }
             }
         }
         return best;
     }
 
-    /** Идёт к точке (скорость задаётся напрямую), возвращает расстояние до неё. */
+    /** Идёт к точке (скорость задаётся напрямую, без телепортов — иначе персонаж дёргается), возвращает горизонтальное расстояние. */
     private static double moveToward(ServerPlayerEntity p, Vec3d target, double stopDist) {
         Vec3d dir = target.subtract(p.getPos());
         double flat = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
@@ -164,13 +186,11 @@ public class TiltEffect implements TrackEffect {
             double vy = (p.horizontalCollision && p.isOnGround()) ? 0.42 : p.getVelocity().y;
             p.setVelocity(v.x, vy, v.z);
             p.velocityModified = true;
-            // поворачиваем камеру в сторону движения
-            if (p.age % 10 == 0) {
-                float yaw = (float) (Math.toDegrees(Math.atan2(-dir.x, dir.z)));
-                p.networkHandler.requestTeleport(p.getX(), p.getY(), p.getZ(), yaw, 10f);
-            }
+            p.setYaw((float) Math.toDegrees(Math.atan2(-dir.x, dir.z)));
+        } else {
+            p.setVelocity(0, p.getVelocity().y, 0);
         }
-        return p.getPos().distanceTo(target);
+        return flat;
     }
 
     @Override

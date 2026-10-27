@@ -9,6 +9,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 public final class ModSounds {
+    public static SoundEvent HYMN;
     private static final Map<Track, SoundEvent> MAP = new EnumMap<>(Track.class);
 
     public static void register() {
@@ -16,6 +17,8 @@ public final class ModSounds {
             Identifier id = Identifier.of(PirateChallenge.MOD_ID, t.soundId);
             MAP.put(t, Registry.register(Registries.SOUND_EVENT, id, SoundEvent.of(id)));
         }
+        Identifier hymn = Identifier.of(PirateChallenge.MOD_ID, "gimn");
+        HYMN = Registry.register(Registries.SOUND_EVENT, hymn, SoundEvent.of(hymn));
     }
 
     public static SoundEvent get(Track t) {

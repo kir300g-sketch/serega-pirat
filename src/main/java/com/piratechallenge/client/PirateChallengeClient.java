@@ -1,7 +1,11 @@
 package com.piratechallenge.client;
 
 import com.piratechallenge.AmStatePayload;
+import com.piratechallenge.BambooPayload;
+import com.piratechallenge.AbilityPayload;
 import com.piratechallenge.CompassPayload;
+import com.piratechallenge.FlowerStatePayload;
+import com.piratechallenge.HymnPayload;
 import com.piratechallenge.SingPayload;
 import com.piratechallenge.ModEntities;
 import com.piratechallenge.ModeSelectPayload;
@@ -19,6 +23,7 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.util.Util;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -40,11 +45,20 @@ public class PirateChallengeClient implements ClientModInitializer {
                     ClientState.qteTicks = payload.ticks();
                 }));
 
+        ClientPlayNetworking.registerGlobalReceiver(BambooPayload.ID,
+                (payload, context) -> context.client().execute(() -> {
+                    ClientState.bambooSeq = payload.seq();
+                    ClientState.bambooBeat = payload.beat();
+                }));
         ClientPlayNetworking.registerGlobalReceiver(ModeSelectPayload.ID,
                 (payload, context) -> context.client().execute(() -> {
                     var mc = context.client();
                     if (!(mc.currentScreen instanceof ModeScreen)) mc.setScreen(new ModeScreen());
                 }));
+        ClientPlayNetworking.registerGlobalReceiver(HymnPayload.ID,
+                (payload, context) -> context.client().execute(() -> ClientState.setHymn(payload.on())));
+        ClientPlayNetworking.registerGlobalReceiver(FlowerStatePayload.ID,
+                (payload, context) -> context.client().execute(() -> ClientState.updateFlower(payload)));
         ClientPlayNetworking.registerGlobalReceiver(CompassPayload.ID,
                 (payload, context) -> context.client().execute(() -> ClientState.updateCompass(payload)));
 
@@ -60,6 +74,7 @@ public class PirateChallengeClient implements ClientModInitializer {
             randomKeys(mc);
             screens(mc);
             mic(mc);
+            flowerKeys(mc);
         });
     }
 
@@ -94,6 +109,11 @@ public class PirateChallengeClient implements ClientModInitializer {
             mc.setScreen(null);
         }
 
+        // Бамбук (трек про китайцев): экран ударов
+        if (!ClientState.bambooSeq.isEmpty() && t == Track.CHINA && !(mc.currentScreen instanceof BambooScreen)) {
+            mc.setScreen(new BambooScreen());
+        }
+
         // Тильт: экран-перехватчик (персонаж не слушается)
         if (t == Track.TILT && !ClientState.paused) {
             if (mc.currentScreen == null && Util.getMeasuringTimeMs() >= TiltScreen.reopenAtMs) {
@@ -115,6 +135,23 @@ public class PirateChallengeClient implements ClientModInitializer {
         // Нога: комбинация букв
         if (ClientState.qteTicks > 0 && !ClientState.qteLetters.isEmpty() && !(mc.currentScreen instanceof QteScreen)) {
             mc.setScreen(new QteScreen());
+        }
+    }
+
+    private static final boolean[] flowerDown = new boolean[3];
+
+    /** Flower Man: клавиши Z / X / C (по фронту нажатия) отправляют способность на сервер. */
+    private static void flowerKeys(MinecraftClient mc) {
+        if (mc.player == null || mc.currentScreen != null || ClientState.track() != Track.FLOWER || ClientState.paused) {
+            java.util.Arrays.fill(flowerDown, false);
+            return;
+        }
+        long window = mc.getWindow().getHandle();
+        int[] keys = {GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C};
+        for (int i = 0; i < 3; i++) {
+            boolean now = InputUtil.isKeyPressed(window, keys[i]);
+            if (now && !flowerDown[i]) ClientPlayNetworking.send(new AbilityPayload(i));
+            flowerDown[i] = now;
         }
     }
 

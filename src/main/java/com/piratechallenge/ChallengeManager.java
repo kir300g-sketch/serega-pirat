@@ -47,6 +47,16 @@ public final class ChallengeManager {
         EFFECTS.put(Track.CHINA, new ChinaEffect());
         EFFECTS.put(Track.TILT, new TiltEffect());
         EFFECTS.put(Track.APOCALYPSE, new ApocalypseEffect());
+        EFFECTS.put(Track.FLOWER, new FlowerEffect());
+    }
+
+    /** Шанс (1 из N) на секретный трек «Flower Man» при каждом автоматическом выборе. */
+    public static final int SECRET_CHANCE = 200;
+
+    /** Бой с драконом: обычный трек прерывается без зачёта. */
+    public static void stopForHymn(ServerPlayerEntity p) {
+        PlayerData d = data(p);
+        if (d.current != null) finish(p, d, false);
     }
 
     /** Пауза между треками: обычный режим — 1.5 минуты, хард (или режим не выбран) — 30 секунд. */
@@ -91,6 +101,7 @@ public final class ChallengeManager {
             PlayerData d = ChallengeSave.get(server).get(p.getUuid());
             if (d.current != null) finish(p, d, false);
             Vision.cancel(p, d);
+            HymnManager.clearGhosts(p, d);
         });
 
         // Смерть прерывает трек (он не засчитывается)
@@ -103,6 +114,7 @@ public final class ChallengeManager {
                     ChallengeSave.get(p.getServer()).markDirty();
                 }
                 Vision.cancel(p, d);
+                HymnManager.cancel(p, d);
                 if (d.current != null) finish(p, d, false);
             }
         });
@@ -126,6 +138,7 @@ public final class ChallengeManager {
                 Taunts.send(p, d.deaths);
             }
             Vision.tick(p, d);
+            HymnManager.tick(p, d);
 
             if (d.cursed && d.listened >= 10 && --d.thoughtTimer <= 0) {
                 d.thoughtTimer = Thoughts.nextDelayTicks(d.listened);
@@ -136,6 +149,8 @@ public final class ChallengeManager {
                 Thoughts.hallucinate(p);
             }
             Sanctions.apply(p, d);
+
+            if (d.hymn) continue; // идёт бой с драконом: играет «Гимн», обычные треки не стартуют
 
             if (d.paused) {
                 if (p.age % 20 == 0) sync(p, d);
@@ -155,7 +170,14 @@ public final class ChallengeManager {
                     }
                 }
                 if (d.listened >= 15 && p.age % 5 == 0) WallCover.check(p, d);
-                EFFECTS.get(d.current).tick(p, d, elapsed, d.totalTicks);
+                try {
+                    EFFECTS.get(d.current).tick(p, d, elapsed, d.totalTicks);
+                } catch (RuntimeException ex) {
+                    // ошибка в эффекте не должна ронять игру: логируем и завершаем трек
+                    org.slf4j.LoggerFactory.getLogger("PirateChallenge").error("Ошибка в эффекте " + d.current, ex);
+                    if (d.current != null) finish(p, d, false);
+                    continue;
+                }
                 if (d.current != null && d.current != Track.GEY && d.sanctionTracks > 0 && Men.allowedOn(d.current)) {
                     Men.tick(p, d, elapsed, d.totalTicks, 6);
                 }
@@ -171,12 +193,16 @@ public final class ChallengeManager {
         if (t == null) {
             // «мешок» по счётчикам: выбираем среди треков, которые слушали реже всего (новые треки = 0 прослушиваний),
             // и не повторяем предыдущий подряд. Старые и новые треки получают равные шансы.
-            int min = Integer.MAX_VALUE;
-            for (Track x : Track.values()) min = Math.min(min, d.plays[x.ordinal()]);
-            List<Track> pool = new ArrayList<>();
-            for (Track x : Track.values()) if (d.plays[x.ordinal()] == min) pool.add(x);
-            if (pool.size() > 1 && d.lastTrack != null) pool.remove(d.lastTrack);
-            t = pool.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(pool.size()));
+            if (java.util.concurrent.ThreadLocalRandom.current().nextInt(SECRET_CHANCE) == 0) {
+                t = Track.FLOWER; // очень редкий секретный трек
+            } else {
+                int min = Integer.MAX_VALUE;
+                for (Track x : Track.values()) if (x != Track.FLOWER) min = Math.min(min, d.plays[x.ordinal()]);
+                List<Track> pool = new ArrayList<>();
+                for (Track x : Track.values()) if (x != Track.FLOWER && d.plays[x.ordinal()] == min) pool.add(x);
+                if (pool.size() > 1 && d.lastTrack != null) pool.remove(d.lastTrack);
+                t = pool.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(pool.size()));
+            }
         }
         Track lastForNext = t;
         d.lastTrack = null;

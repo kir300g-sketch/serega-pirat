@@ -37,6 +37,13 @@ public final class HudOverlay {
         counter(ctx, mc.textRenderer, w);
 
         if (t == Track.FP_AM) skillBar(ctx, mc.textRenderer, w, h);
+        if (t == Track.FLOWER) flowerBar(ctx, mc.textRenderer, w, h);
+        if (ClientState.hymn) {
+            // «Гимн»: размытие экрана временами + тёмные края; всё поверх остального
+            ctx.fillGradient(0, 0, w, h / 3, 0x66000000, 0x00000000);
+            ctx.fillGradient(0, h * 2 / 3, w, h, 0x00000000, 0x66000000);
+            BlurFx.render(ctx, BlurFx.intensity());
+        }
         if (t == Track.LASTPICK) micUi(ctx, mc.textRenderer, w, h);
         if (t == Track.COWBOY && ClientState.cmpValid) thiefArrow(ctx, mc, w, h);
         if (ClientState.sanctions > 0) {
@@ -49,6 +56,32 @@ public final class HudOverlay {
         if (ClientState.paused) {
             String pause = "⏸ ПАУЗА";
             ctx.drawCenteredTextWithShadow(mc.textRenderer, pause, w / 2, 40, 0xFFFFFF55);
+        }
+    }
+
+    /** Flower Man: панель способностей Z / X / C. */
+    private static void flowerBar(DrawContext ctx, TextRenderer tr, int w, int h) {
+        String[] keys = {"Z", "X", "C"};
+        String[] names = {"Деш-пинок", "Копии", ClientState.flowerOmega > 0 ? "ОМЕГА!" : "Омега"};
+        int[] cds = {ClientState.flowerCdZ, ClientState.flowerCdX, ClientState.flowerCdC};
+        int[] maxes = {18, 80, 600};
+        float time = Util.getMeasuringTimeMs() / 1000f;
+        int size = 34, gap = 6, total = 3 * size + 2 * gap;
+        int x0 = (w - total) / 2, y = h - size - 42;
+        for (int i = 0; i < 3; i++) {
+            int x = x0 + i * (size + gap);
+            ctx.fill(x - 1, y - 1, x + size + 1, y + size + 1, 0xFF000000);
+            ctx.fill(x, y, x + size, y + size, 0xCC221133);
+            ctx.fill(x, y, x + size, y + 3, 0xFF000000 | hue(time * 0.5f + i * 0.3f));
+            ctx.drawCenteredTextWithShadow(tr, keys[i], x + size / 2, y + 7, 0xFFFFFFFF);
+            ctx.drawCenteredTextWithShadow(tr, names[i], x + size / 2, y + size - 10, 0xFFEECCFF);
+            if (cds[i] > 0) {
+                int fh = (int) (size * Math.min(1f, cds[i] / (float) maxes[i]));
+                ctx.fill(x, y + size - fh, x + size, y + size, 0xAA000000);
+            }
+        }
+        if (ClientState.flowerOmega > 0) {
+            ctx.drawCenteredTextWithShadow(tr, "ОМЕГА-ФОРМА: " + (ClientState.flowerOmega / 20) + " с", w / 2, y - 12, hue(time) | 0xFF000000);
         }
     }
 
@@ -229,27 +262,24 @@ public final class HudOverlay {
                 grad(ctx, 0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
             }
             case FP_AM -> fill(ctx, 0, 0, w, h, 22, 0x2255FF);
-            case CHINA -> {
-                // бамбуковый туман + туннельное зрение: края затемнены ступенями, остаётся небольшое «окно» в центре
-                fill(ctx, 0, 0, w, h, 55, 0xCFE8D0);
-                int steps = 12;
-                for (int i = 0; i < steps; i++) {
-                    float f = i / (float) steps;
-                    int a = 235 - i * 14;
-                    // кольцо толщиной в один шаг между внешней и внутренней рамкой
-                    int ox = (int) (w * 0.5f * f * 0.62f), oy = (int) (h * 0.5f * f * 0.62f);
-                    int nx = (int) (w * 0.5f * (i + 1) / steps * 0.62f), ny = (int) (h * 0.5f * (i + 1) / steps * 0.62f);
-                    int c = (Math.max(a, 0) << 24) | 0x0A1208;
-                    ctx.fill(ox, oy, w - ox, ny, c);              // верх
-                    ctx.fill(ox, h - ny, w - ox, h - oy, c);      // низ
-                    ctx.fill(ox, ny, nx, h - ny, c);              // лево
-                    ctx.fill(w - nx, ny, w - ox, h - ny, c);      // право
+            case FLOWER -> {
+                // радужное свечение по краям; в Омега-форме — радужный фильтр на весь экран
+                for (int i = 0; i < 6; i++) {
+                    int c = hue(time * 0.4f + i / 6f);
+                    fill(ctx, i * w / 6, 0, (i + 1) * w / 6, 14, 90, c);
+                    fill(ctx, i * w / 6, h - 14, (i + 1) * w / 6, h, 90, c);
                 }
-                // самый край — почти чёрный
-                ctx.fill(0, 0, w, (int) (h * 0.02f), 0xFF050805);
-                ctx.fill(0, h - (int) (h * 0.02f), w, h, 0xFF050805);
-                ctx.fill(0, 0, (int) (w * 0.02f), h, 0xFF050805);
-                ctx.fill(w - (int) (w * 0.02f), 0, w, h, 0xFF050805);
+                if (ClientState.flowerOmega > 0) {
+                    int stripes = 10;
+                    for (int i = 0; i < stripes; i++) {
+                        fill(ctx, 0, i * h / stripes, w, (i + 1) * h / stripes, 48, hue(time * 0.8f + i * 0.1f));
+                    }
+                }
+            }
+            case CHINA -> {
+                fill(ctx, 0, 0, w, h, 38, 0xA8E0B0);                    // лёгкий зелёный туман рощи
+                grad(ctx, 0, 0, w, h / 4, 0x66103010, 0x00103010);
+                grad(ctx, 0, h * 3 / 4, w, h, 0x00103010, 0x66103010);
             }
             case TILT -> {
                 fill(ctx, 0, 0, w, h, 60, 0x555555);

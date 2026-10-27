@@ -77,9 +77,28 @@ public class PlayerData {
     public int singTicks, lastSingTick, micState; // micState: 0 неизвестно, 1 есть, 2 нет
     public boolean coverEars;
     public boolean coverNotified;
+    // Flower Man
+    public final int[] flowerCd = new int[3];
+    public int omegaTicks, dashTicks, bounceTicks, comboCount, comboTimer;
+    public boolean dashHit;
+    public Vec3d dashDir = Vec3d.ZERO;
+    public final java.util.Map<UUID, Integer> cloneLife = new HashMap<>();
+    public final java.util.Map<UUID, double[]> cloneInfo = new HashMap<>();   // {угол, фаза}
+    public final java.util.List<Vec3d> trail = new ArrayList<>();
+    // Гимн (бой с драконом)
+    public boolean hymn;
+    public int ghostTimer, ghostTicks, hymnChat;
+    public final java.util.List<UUID> ghostIds = new ArrayList<>();
+    public final java.util.Map<UUID, double[]> ghostDragons = new HashMap<>(); // позиции копий дракона: {x, y, z, yaw}
+    // Бамбук (трек про китайцев)
+    public final java.util.List<int[]> bambooStalks = new ArrayList<>();             // {x, baseY, z, высота, срезан(0/1)}
+    public final java.util.List<Object[]> bambooRestore = new ArrayList<>();         // {BlockPos, BlockState} — вернуть землю
+    public boolean bambooBusy;
+    public int bambooTimer, bambooTarget, bambooDeadline, bambooCuts;
     // Тильт
     public int tiltPhase, tiltAttempts, tiltLastAttempt, tiltBotTimer;
     public net.minecraft.util.math.BlockPos botTarget;
+    public final java.util.Set<Long> botBlack = new java.util.HashSet<>();
     // Апокалипсис
     public final java.util.List<double[]> meteors = new ArrayList<>();
     public final java.util.List<double[]> nukes = new ArrayList<>();
@@ -120,11 +139,26 @@ public class PlayerData {
         reload = 0;
         horseId = null;
         heading = 0;
+        java.util.Arrays.fill(flowerCd, 0);
+        omegaTicks = dashTicks = bounceTicks = comboCount = comboTimer = 0;
+        dashHit = false;
+        dashDir = Vec3d.ZERO;
+        cloneLife.clear();
+        cloneInfo.clear();
+        trail.clear();
+        bambooStalks.clear();
+        bambooRestore.clear();
+        bambooBusy = false;
+        bambooTimer = 0;
+        bambooTarget = 0;
+        bambooDeadline = 0;
+        bambooCuts = 0;
         tiltPhase = 0;
         tiltAttempts = 0;
         tiltLastAttempt = 0;
         tiltBotTimer = 0;
         botTarget = null;
+        botBlack.clear();
         meteors.clear();
         nukes.clear();
         nukeTimer = 0;
