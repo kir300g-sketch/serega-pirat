@@ -195,7 +195,12 @@ public class FlowerEffect implements TrackEffect {
         // Логика обновления клонов мода
     }
 
-    private void spawnEnemy(ServerPlayerEntity p, PlayerData d) {
+     private void spawnEnemy(ServerPlayerEntity p, PlayerData d) {
         // Логика спавна тренировочных врагов
+    }
+
+    @Override
+    public void end(ServerPlayerEntity p, PlayerData d) {
+        // Этот метод вызывается, когда эффект цветка заканчивается
     }
 }
