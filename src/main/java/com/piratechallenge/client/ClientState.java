@@ -21,6 +21,9 @@ public final class ClientState {
     // ФП АМ
     public static int amMana, amCd1, amCd2, amCd3, amCounter, amKills;
 
+    // Минёр: пауза без сапёра (идёт дождь TNT)
+    public static int minerWait;
+
     // Бамбук
     public static String bambooSeq = "";
     public static int bambooBeat = 24;
@@ -139,6 +142,7 @@ public final class ClientState {
     }
 
     public static void tick() {
+        if (minerWait > 0) minerWait--;
         if (hymnEchoDelay > 0 && --hymnEchoDelay == 0 && hymn) {
             hymnEcho = new MusicInstance(ModSounds.HYMN, true, true, 0.955f);
             hymnEcho.setTargetVolume(0.55f);

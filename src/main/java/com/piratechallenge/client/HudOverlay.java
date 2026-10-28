@@ -262,6 +262,16 @@ public final class HudOverlay {
                 grad(ctx, 0, 0, w, h / 3, 0x55FFA000, 0x00FF7A00);
             }
             case FP_AM -> fill(ctx, 0, 0, w, h, 22, 0x2255FF);
+            case MUTANTS -> {
+                fill(ctx, 0, 0, w, h, 34 + (int) (10 * Math.sin(time * 3)), 0x44FF22);
+                grad(ctx, 0, 0, w, h / 3, 0x88103000, 0x00103000);
+                grad(ctx, 0, h * 2 / 3, w, h, 0x00103000, 0x88103000);
+            }
+            case AQUAPARK -> {
+                fill(ctx, 0, 0, w, h, 22, 0x33CCFF);
+                grad(ctx, 0, 0, w, h / 6, 0x5566DDFF, 0x0066DDFF);
+            }
+            case MINER -> fill(ctx, 0, 0, w, h, 14, 0x666666);
             case FLOWER -> {
                 // радужное свечение по краям; в Омега-форме — радужный фильтр на весь экран
                 for (int i = 0; i < 6; i++) {

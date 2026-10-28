@@ -31,11 +31,15 @@ public final class EffectUtil {
     }
 
     /** Удаляет ВСЕХ существ, помеченных модом, во всех мирах (остатки после выхода из игры и т.п.). */
-    public static void sweep(net.minecraft.server.MinecraftServer server) {
+    public static void sweep(net.minecraft.server.MinecraftServer server) { sweep(server, true); }
+
+    /** includeVisions=false — не трогать видения (Серёги/копии дракона), они живут своими таймерами. */
+    public static void sweep(net.minecraft.server.MinecraftServer server, boolean includeVisions) {
         for (ServerWorld w : server.getWorlds()) {
             for (net.minecraft.entity.mob.MobEntity m : w.getEntitiesByType(
                     net.minecraft.util.TypeFilter.instanceOf(net.minecraft.entity.mob.MobEntity.class),
-                    e -> e.getCommandTags().contains(SPAWN_TAG) || e.getCommandTags().contains("pc_serega"))) {
+                    e -> e.getCommandTags().contains(SPAWN_TAG)
+                            || (includeVisions && (e.getCommandTags().contains("pc_serega") || e.getCommandTags().contains("pc_vision"))))) {
                 m.discard();
             }
         }

@@ -42,6 +42,12 @@ public final class Vision {
         }
     }
 
+    /** Тест из Плеера Серёги: запустить видение прямо сейчас. */
+    public static void forceStart(ServerPlayerEntity p, PlayerData d) {
+        if (d.visionTicks > 0) cancel(p, d);
+        start(p, d);
+    }
+
     private static void start(ServerPlayerEntity p, PlayerData d) {
         ServerWorld w = p.getServerWorld();
         d.visionTicks = DURATION;
@@ -64,7 +70,7 @@ public final class Vision {
             s.setCustomNameVisible(true);
             s.setPersistent();
             s.setSilent(true);
-            s.addCommandTag("pc_serega");
+            s.addCommandTag("pc_vision");
             w.spawnEntity(s);
             d.visionIds.add(s.getUuid());
         }

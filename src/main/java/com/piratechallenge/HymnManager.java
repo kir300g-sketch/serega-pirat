@@ -37,7 +37,7 @@ public final class HymnManager {
     public static void tick(ServerPlayerEntity p, PlayerData d) {
         if (p.age % 20 == 0) {
             ServerWorld w = p.getServerWorld();
-            boolean fight = p.isAlive() && w.getRegistryKey() == World.END && !w.getEntitiesByType(
+            boolean fight = d.hymnForce || p.isAlive() && w.getRegistryKey() == World.END && !w.getEntitiesByType(
                     TypeFilter.instanceOf(EnderDragonEntity.class),
                     e -> e.isAlive() && !e.getCommandTags().contains(GHOST_TAG)).isEmpty();
             if (fight != d.hymn) {
@@ -91,7 +91,7 @@ public final class HymnManager {
             s.setPersistent();
             s.setSilent(true);
             s.addCommandTag(GHOST_TAG);
-            s.addCommandTag("pc_serega");
+            s.addCommandTag("pc_vision");
             w.spawnEntity(s);
             d.ghostIds.add(s.getUuid());
         }
@@ -108,6 +108,7 @@ public final class HymnManager {
             dr.setSilent(true);
             dr.setNoGravity(true);
             dr.addCommandTag(GHOST_TAG);
+            dr.addCommandTag("pc_vision");
             w.spawnEntity(dr);
             d.ghostIds.add(dr.getUuid());
             d.ghostDragons.put(dr.getUuid(), new double[]{x, y, z, yaw});

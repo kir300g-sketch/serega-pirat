@@ -28,7 +28,7 @@ public final class SkyArena {
     public static void clear(ServerWorld w, BlockPos c, int half, int wallH) {
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
-                for (int dy = -1; dy <= wallH + 8; dy++) {
+                for (int dy = -4; dy <= wallH + 8; dy++) {
                     w.setBlockState(c.add(dx, dy, dz), Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS);
                 }
             }

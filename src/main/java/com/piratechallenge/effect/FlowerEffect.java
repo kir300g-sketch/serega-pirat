@@ -172,25 +172,7 @@ public class FlowerEffect implements TrackEffect {
     // ------------------------------------------------------------------ визуал
 
     private void glow(ServerPlayerEntity p, PlayerData d, ServerWorld w, int elapsed) {
-        // радужные ноты вокруг тела (цвет ноты задаётся «скоростью» по X)
-        for (int i = 0; i < 5; i++) {
-            double a = elapsed * 0.25 + i * Math.PI * 2 / 5;
-            double hue = ((elapsed * 0.02) + i / 5.0) % 1.0;
-            w.spawnParticles(ParticleTypes.NOTE, p.getX() + Math.cos(a) * 0.7, p.getY() + 0.9 + Math.sin(a * 0.7) * 0.5,
-                    p.getZ() + Math.sin(a) * 0.7, 0, hue, 0, 0, 1.0);
-        }
-        // след: запоминаем позиции, через ~0.4с рисуем в них радужный силуэт
-        d.trail.add(p.getPos());
-        if (d.trail.size() > 10) d.trail.remove(0);
-        if (elapsed % 2 == 0 && d.trail.size() >= 8) {
-            Vec3d t = d.trail.get(0);
-            if (t.squaredDistanceTo(p.getPos()) > 0.25) {
-                for (int k = 0; k < 9; k++) {
-                    double hue = k / 9.0;
-                    w.spawnParticles(ParticleTypes.NOTE, t.x, t.y + 0.1 + k * 0.2, t.z, 0, hue, 0, 0, 1.0);
-                }
-            }
-        }
+        // радужное свечение и след-силуэт рисует клиент собственным рендером (client/RainbowTrail), не частицами Майнкрафта
     }
 
     // ------------------------------------------------------------------ копии

@@ -198,5 +198,29 @@
         "stream": true
       }
     ]
+  },
+  "miner": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:miner",
+        "stream": true
+      }
+    ]
+  },
+  "mutanty": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:mutanty",
+        "stream": true
+      }
+    ]
+  },
+  "akvapark": {
+    "sounds": [
+      {
+        "name": "pirate_challenge:akvapark",
+        "stream": true
+      }
+    ]
   }
 }

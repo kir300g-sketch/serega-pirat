@@ -48,6 +48,9 @@ public final class ChallengeManager {
         EFFECTS.put(Track.TILT, new TiltEffect());
         EFFECTS.put(Track.APOCALYPSE, new ApocalypseEffect());
         EFFECTS.put(Track.FLOWER, new FlowerEffect());
+        EFFECTS.put(Track.MINER, new MinerEffect());
+        EFFECTS.put(Track.MUTANTS, new MutantsEffect());
+        EFFECTS.put(Track.AQUAPARK, new AquaparkEffect());
     }
 
     /** Шанс (1 из N) на секретный трек «Flower Man» при каждом автоматическом выборе. */
@@ -249,7 +252,7 @@ public final class ChallengeManager {
         }
         MinecraftServer server = p.getServer();
         ChallengeSave.get(server).markDirty();
-        if (!anyActive(server)) EffectUtil.sweep(server);
+        if (!anyActive(server)) EffectUtil.sweep(server, false);
         sync(p, d);
     }
 

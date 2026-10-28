@@ -20,16 +20,16 @@ import net.minecraft.text.Text;
  * сбросить счётчик, проклятие вкл/выкл, перезапуск интро-диалога.
  */
 public final class PlayerGui {
-    private static final int TRACK_SLOTS = 27;
-    private static final int CTRL_PAUSE = 28, CTRL_STOP = 29, CTRL_SKIP = 30, CTRL_AUTO = 31,
-            CTRL_RESET = 32, CTRL_CURSE = 33, CTRL_INTRO = 34, CTRL_MODE = 35;
+    private static final int TRACK_SLOTS = 36;
+    private static final int CTRL_PAUSE = 37, CTRL_STOP = 38, CTRL_SKIP = 39, CTRL_AUTO = 40, CTRL_RESET = 41,
+            CTRL_PLUS5 = 42, CTRL_CURSE = 43, CTRL_INTRO = 44, CTRL_MODE = 45, CTRL_VISION = 46, CTRL_HYMN = 47;
 
     public static boolean isAdmin(ServerPlayerEntity p) {
         return p.hasPermissionLevel(2) || p.getServer().isSingleplayer();
     }
 
     public static void open(ServerPlayerEntity sp) {
-        SimpleInventory inv = new SimpleInventory(36);
+        SimpleInventory inv = new SimpleInventory(54);
         fill(inv, sp);
         sp.openHandledScreen(new SimpleNamedScreenHandlerFactory(
                 (syncId, playerInv, player) -> new Handler(syncId, playerInv, inv, sp),
@@ -45,7 +45,7 @@ public final class PlayerGui {
 
     static void fill(SimpleInventory inv, ServerPlayerEntity sp) {
         PlayerData d = ChallengeManager.data(sp);
-        for (int i = 0; i < 36; i++) inv.setStack(i, ItemStack.EMPTY);
+        for (int i = 0; i < 54; i++) inv.setStack(i, ItemStack.EMPTY);
 
         Track[] all = Track.values();
         for (int i = 0; i < all.length && i < TRACK_SLOTS; i++) {
@@ -63,6 +63,9 @@ public final class PlayerGui {
         inv.setStack(CTRL_CURSE, named(Items.WITHER_SKELETON_SKULL, "§4Проклятие: " + (d.cursed ? "§aЕСТЬ §7(клик — снять)" : "§cНЕТ §7(клик — наложить)"), d.cursed));
         inv.setStack(CTRL_MODE, named(Items.COMPARATOR,
                 "§fРежим: " + (d.mode == 1 ? "§aОБЫЧНЫЙ §7(раз в 1.5 мин)" : (d.mode == 2 ? "§cХАРД §7(раз в 30 сек)" : "§7не выбран")) + " §7(клик — сменить)", false));
+        inv.setStack(CTRL_PLUS5, named(Items.EXPERIENCE_BOTTLE, "§f+5 к счётчику треков (сейчас: " + d.listened + ") — для проверки дебафов", false));
+        inv.setStack(CTRL_VISION, named(Items.ENDER_EYE, "§dТЕСТ: запустить «видение» (Серёги вокруг)", false));
+        inv.setStack(CTRL_HYMN, named(Items.NETHER_STAR, "§cТЕСТ: Гимн " + (d.hymnForce ? "§aВКЛ" : "§7ВЫКЛ") + " §7(как в бою с драконом)", d.hymnForce));
         inv.setStack(CTRL_INTRO, named(Items.BOOK, "§dПерезапустить интро-диалог с Серёгой", false));
     }
 
@@ -94,6 +97,12 @@ public final class PlayerGui {
                     ChallengeSave.get(sp.getServer()).markDirty();
                 }
             }
+            case CTRL_PLUS5 -> {
+                d.listened += 5;
+                ChallengeSave.get(sp.getServer()).markDirty();
+            }
+            case CTRL_VISION -> Vision.forceStart(sp, d);
+            case CTRL_HYMN -> d.hymnForce = !d.hymnForce;
             case CTRL_MODE -> DialogueManager.setMode(sp, d.mode != 2);
             case CTRL_INTRO -> DialogueManager.restart(sp, d);
             default -> {}
@@ -105,14 +114,14 @@ public final class PlayerGui {
         private final ServerPlayerEntity owner;
 
         Handler(int syncId, PlayerInventory playerInv, SimpleInventory inv, ServerPlayerEntity owner) {
-            super(ScreenHandlerType.GENERIC_9X4, syncId, playerInv, inv, 4);
+            super(ScreenHandlerType.GENERIC_9X6, syncId, playerInv, inv, 6);
             this.inv = inv;
             this.owner = owner;
         }
 
         @Override
         public void onSlotClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player) {
-            if (slotIndex >= 0 && slotIndex < 36) {
+            if (slotIndex >= 0 && slotIndex < 54) {
                 if (player instanceof ServerPlayerEntity sp) click(sp, slotIndex);
                 fill(inv, owner);
                 sendContentUpdates();

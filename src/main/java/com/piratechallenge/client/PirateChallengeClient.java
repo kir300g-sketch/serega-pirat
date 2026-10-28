@@ -18,6 +18,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.option.Perspective;
@@ -68,6 +69,7 @@ public class PirateChallengeClient implements ClientModInitializer {
         });
 
         HudRenderCallback.EVENT.register(HudOverlay::render);
+        WorldRenderEvents.AFTER_TRANSLUCENT.register(RainbowTrail::render);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             ClientState.tick();
@@ -75,6 +77,7 @@ public class PirateChallengeClient implements ClientModInitializer {
             screens(mc);
             mic(mc);
             flowerKeys(mc);
+            RainbowTrail.sample(mc);
         });
     }
 
@@ -112,6 +115,15 @@ public class PirateChallengeClient implements ClientModInitializer {
         // Бамбук (трек про китайцев): экран ударов
         if (!ClientState.bambooSeq.isEmpty() && t == Track.CHINA && !(mc.currentScreen instanceof BambooScreen)) {
             mc.setScreen(new BambooScreen());
+        }
+
+        // Минёр: сапёр, пока не идёт дождь TNT
+        if (t == Track.MINER && !ClientState.paused && ClientState.minerWait <= 0) {
+            if (mc.currentScreen == null && Util.getMeasuringTimeMs() >= MinesweeperScreen.reopenAtMs) {
+                mc.setScreen(new MinesweeperScreen());
+            }
+        } else if (mc.currentScreen instanceof MinesweeperScreen && (t != Track.MINER || ClientState.minerWait > 0)) {
+            mc.setScreen(null);
         }
 
         // Тильт: экран-перехватчик (персонаж не слушается)

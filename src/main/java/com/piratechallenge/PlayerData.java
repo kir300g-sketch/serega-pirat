@@ -77,6 +77,16 @@ public class PlayerData {
     public int singTicks, lastSingTick, micState; // micState: 0 неизвестно, 1 есть, 2 нет
     public boolean coverEars;
     public boolean coverNotified;
+    // Минёр (дождь TNT)
+    public int tntRain;
+    public final java.util.List<UUID> tntIds = new ArrayList<>();
+    // Мутанты
+    public int mutTick;
+    public String mutName = "";
+    // Аквапарк
+    public int ruleTick, ruleType, violationCd, waveTimer;
+    // Тесты из Плеера Серёги
+    public boolean hymnForce;
     // Flower Man
     public final int[] flowerCd = new int[3];
     public int omegaTicks, dashTicks, bounceTicks, comboCount, comboTimer;
@@ -139,6 +149,11 @@ public class PlayerData {
         reload = 0;
         horseId = null;
         heading = 0;
+        tntRain = 0;
+        tntIds.clear();
+        mutTick = 0;
+        mutName = "";
+        ruleTick = ruleType = violationCd = waveTimer = 0;
         java.util.Arrays.fill(flowerCd, 0);
         omegaTicks = dashTicks = bounceTicks = comboCount = comboTimer = 0;
         dashHit = false;

@@ -32,6 +32,7 @@ public class PirateChallenge implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(QtePayload.ID, QtePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(AmStatePayload.ID, AmStatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CompassPayload.ID, CompassPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(MinerResultPayload.ID, MinerResultPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(FlowerStatePayload.ID, FlowerStatePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(AbilityPayload.ID, AbilityPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BambooPayload.ID, BambooPayload.CODEC);
@@ -52,6 +53,8 @@ public class PirateChallenge implements ModInitializer {
         // ---- сеть: клиент -> сервер
         ServerPlayNetworking.registerGlobalReceiver(QteResultPayload.ID,
                 (payload, ctx) -> NogaEffect.onResult(ctx.player(), payload.success()));
+        ServerPlayNetworking.registerGlobalReceiver(MinerResultPayload.ID,
+                (payload, ctx) -> MinerEffect.onResult(ctx.player(), payload.won()));
         ServerPlayNetworking.registerGlobalReceiver(AbilityPayload.ID,
                 (payload, ctx) -> FlowerEffect.onAbility(ctx.player(), payload.id()));
         ServerPlayNetworking.registerGlobalReceiver(BambooResultPayload.ID,
@@ -129,6 +132,7 @@ public class PirateChallenge implements ModInitializer {
                 }
                 if (tags.contains(AntiMageEffect.TAG)) AntiMageEffect.onKill(p, entity);
                 if (tags.contains(CowboyEffect.THIEF_TAG)) CowboyEffect.onKill(p, entity);
+                if (tags.contains(MutantsEffect.HUNTER_TAG)) MutantsEffect.onKill(p, entity);
             }
             if (entity instanceof EnderDragonEntity && !entity.getCommandTags().contains(HymnManager.GHOST_TAG)
                     && entity.getWorld() instanceof ServerWorld sw) {
