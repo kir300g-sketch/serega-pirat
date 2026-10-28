@@ -221,12 +221,8 @@ public class FlowerEffect implements TrackEffect {
     private static void spawnEnemy(ServerPlayerEntity p, PlayerData d) {
         // Логика спавна тренировочных врагов
     }
-
     @Override
     public void end(ServerPlayerEntity p, PlayerData d) {
-            @Override
-    public void end(ServerPlayerEntity p, PlayerData d) {
         p.sendMessage(Text.literal("§cДействие эффекта цветка закончилось."), false);
-    } // <- закрывает метод end
-} // <- ДОБАВЬТЕ ЭТУ СКОБКУ! Она закроет весь класс FlowerEffect
-
+    }
+}
