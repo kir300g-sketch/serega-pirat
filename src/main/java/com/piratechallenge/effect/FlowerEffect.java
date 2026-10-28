@@ -202,7 +202,7 @@ public class FlowerEffect implements TrackEffect {
         
         // Копируем экипировку игрока на клона
         for (EquipmentSlot slot : EquipmentSlot.values()) {
-            clone.setEquipmentStack(slot, p.getEquippedStack(slot).copy());
+    clone.equipStack(slot, p.getEquippedStack(slot).copy());
         }
 
         w.spawnEntity(clone);
