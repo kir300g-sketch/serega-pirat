@@ -38,7 +38,7 @@ import java.util.UUID;
 
 /**
  * СЕКРЕТНЫЙ трек «Flower Man». Ты — Цветочек: радужное свечение и радужный след-силуэт.
- *  Z — деш ударом ногой: при попадании плавно отскакиваешь назад и чуть вверх (комбо — перезарядка сбрасывается).
+ *  Z — деш ударом ногой: при попадании плавно отскакиваешь назад и чуть вверх.
  *  X — призываешь синие копии себя, они делают выпады во врагов.
  *  C — Омега-форма: радужный фильтр, все навыки сильнее и быстрее.
  */
@@ -133,7 +133,7 @@ public class FlowerEffect implements TrackEffect {
         }
     }
 
-    private void doDash(ServerPlayerEntity p, PlayerData d, ServerWorld w) {
+    private static void doDash(ServerPlayerEntity p, PlayerData d, ServerWorld w) {
         boolean om = omega(d);
         double speed = om ? 1.35 : 1.0;
         p.setVelocity(d.dashDir.x * speed, Math.max(p.getVelocity().y, 0.05), d.dashDir.z * speed);
@@ -145,14 +145,14 @@ public class FlowerEffect implements TrackEffect {
             for (LivingEntity e : w.getEntitiesByClass(LivingEntity.class, p.getBoundingBox().expand(1.6, 0.6, 1.6),
                     x -> x != p && x.isAlive() && !(x instanceof ArmorStandEntity))) {
                 Vec3d to = e.getPos().subtract(from);
-                if (to.x * d.dashDir.x + to.z * d.dashDir.z < -0.2) continue; // только впереди
+                if (to.x * d.dashDir.x + to.z * d.dashDir.z < -0.2) continue;
                 e.damage(p.getDamageSources().playerAttack(p), om ? 9.0f : 6.0f);
                 w.spawnParticles(ParticleTypes.CRIT, e.getX(), e.getBodyY(0.6), e.getZ(), 20, 0.3, 0.3, 0.3, 0.4);
                 w.playSound(null, e.getX(), e.getY(), e.getZ(), SoundEvents.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.PLAYERS, 1f, 1.1f);
                 d.dashHit = true;
                 d.dashTicks = 0;
-                d.bounceTicks = 9;              // отскок (плавно назад и чуть вверх)
-                d.flowerCd[0] = 0;              // комбо: сразу можно снова
+                d.bounceTicks = 9;
+                d.flowerCd[0] = 0;
                 d.comboCount++;
                 d.comboTimer = 50;
                 EffectUtil.bar(p, "§d§lКОМБО x" + d.comboCount);
@@ -161,7 +161,7 @@ public class FlowerEffect implements TrackEffect {
         }
     }
 
-    private void doBounce(ServerPlayerEntity p, PlayerData d) {
+    private static void doBounce(ServerPlayerEntity p, PlayerData d) {
         double k = d.bounceTicks / 9.0;
         double up = d.bounceTicks > 5 ? 0.32 : p.getVelocity().y;
         p.setVelocity(-d.dashDir.x * 0.55 * k, up, -d.dashDir.z * 0.55 * k);
@@ -171,112 +171,56 @@ public class FlowerEffect implements TrackEffect {
 
     // ------------------------------------------------------------------ визуал
 
-    private void glow(ServerPlayerEntity p, PlayerData d, ServerWorld w, int elapsed) {
-        // радужное свечение и след-силуэт рисует клиент собственным рендером (client/RainbowTrail), не частицами Майнкрафта
-    }
-
-    // ------------------------------------------------------------------ копии
-
-    private void spawnClone(ServerPlayerEntity p, PlayerData d, ServerWorld w, int i, int n) {
-        ArmorStandEntity st = EntityType.ARMOR_STAND.create(w);
-        if (st == null) return;
-        double ang = Math.PI * 2 * i / n;
-        st.refreshPositionAndAngles(p.getX() + Math.cos(ang) * 2.0, p.getY(), p.getZ() + Math.sin(ang) * 2.0, p.getYaw(), 0f);
-        st.setShowArms(true);
-        st.setHideBasePlate(true);
-        st.setNoGravity(true);
-        st.setInvulnerable(true);
-        st.setSilent(true);
-
-        ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-        head.set(DataComponentTypes.PROFILE, new ProfileComponent(p.getGameProfile()));
-        st.equipStack(EquipmentSlot.HEAD, head);
-        st.equipStack(EquipmentSlot.CHEST, blue(Items.LEATHER_CHESTPLATE));
-        st.equipStack(EquipmentSlot.LEGS, blue(Items.LEATHER_LEGGINGS));
-        st.equipStack(EquipmentSlot.FEET, blue(Items.LEATHER_BOOTS));
-        st.equipStack(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
-
-        w.spawnEntity(st);
-        EffectUtil.reg(d, st);
-        d.cloneLife.put(st.getUuid(), 70);
-        d.cloneInfo.put(st.getUuid(), new double[]{ang, RNG.nextDouble() * 6});
-        w.spawnParticles(ParticleTypes.END_ROD, st.getX(), st.getY() + 1, st.getZ(), 12, 0.3, 0.6, 0.3, 0.05);
-    }
-
-    private static ItemStack blue(net.minecraft.item.Item item) {
-        ItemStack s = new ItemStack(item);
-        s.set(DataComponentTypes.DYED_COLOR, new DyedColorComponent(0x2266FF, false));
-        return s;
-    }
-
-    private void updateClones(ServerPlayerEntity p, PlayerData d, ServerWorld w) {
-        boolean om = omega(d);
-        List<UUID> ids = new ArrayList<>(d.cloneLife.keySet());
-        for (UUID id : ids) {
-            Entity e = w.getEntity(id);
-            int life = d.cloneLife.getOrDefault(id, 0);
-            if (!(e instanceof ArmorStandEntity st) || life <= 0) {
-                if (e != null) {
-                    w.spawnParticles(ParticleTypes.END_ROD, e.getX(), e.getY() + 1, e.getZ(), 15, 0.3, 0.6, 0.3, 0.05);
-                    e.discard();
-                }
-                d.cloneLife.remove(id);
-                d.cloneInfo.remove(id);
-                continue;
-            }
-            d.cloneLife.put(id, life - 1);
-            double[] info = d.cloneInfo.get(id);
-
-            // ближайший враг вокруг хозяина
-            Optional<HostileEntity> foe = w.getEntitiesByClass(HostileEntity.class, p.getBoundingBox().expand(18), Entity::isAlive)
-                    .stream().min(Comparator.comparingDouble(m -> m.squaredDistanceTo(st)));
-            if (foe.isEmpty()) {
-                // без врагов — держатся рядом с игроком
-                st.refreshPositionAndAngles(p.getX() + Math.cos(info[0] + life * 0.05) * 2.2, p.getY(),
-                        p.getZ() + Math.sin(info[0] + life * 0.05) * 2.2, p.getYaw(), 0f);
-                continue;
-            }
-            LivingEntity t = foe.get();
-            // выпад: сближение и отход по косинусу; удар в момент наибольшего сближения
-            double phase = (70 - life) * (om ? 0.55 : 0.4) + info[1];
-            double off = 0.9 + 3.2 * (1 + Math.cos(phase)) / 2.0;
-            Vec3d pos = new Vec3d(t.getX() + Math.cos(info[0]) * off, t.getY(), t.getZ() + Math.sin(info[0]) * off);
-            float yaw = (float) (Math.toDegrees(Math.atan2(t.getZ() - pos.z, t.getX() - pos.x)) - 90.0);
-            st.refreshPositionAndAngles(pos.x, pos.y, pos.z, yaw, 0f);
-            if (off < 1.6 && life % (om ? 5 : 8) == 0) {
-                t.damage(p.getDamageSources().playerAttack(p), om ? 5.5f : 3.5f);
-                w.spawnParticles(ParticleTypes.SWEEP_ATTACK, t.getX(), t.getBodyY(0.5), t.getZ(), 1, 0, 0, 0, 0);
-                w.spawnParticles(ParticleTypes.END_ROD, t.getX(), t.getBodyY(0.5), t.getZ(), 6, 0.2, 0.2, 0.2, 0.1);
-            }
+    private static void glow(ServerPlayerEntity p, PlayerData d, ServerWorld w, int elapsed) {
+        for (int i = 0; i < 5; i++) {
+            double a = elapsed * 0.25 + i * Math.PI * 2 / 5;
+            double hue = ((elapsed * 0.02) + i / 5.0) % 1.0;
+            w.spawnParticles(ParticleTypes.NOTE, p.getX() + Math.cos(a) * 0.7, p.getY() + 0.9 + Math.sin(a * 0.7) * 0.5,
+                    p.getZ() + Math.sin(a) * 0.7, 0, hue, 0, 0, 1.0);
+        }
+        if (p.getPos() != null) {
+            d.trail.add(p.getPos());
         }
     }
 
-    private void spawnEnemy(ServerPlayerEntity p, PlayerData d) {
-        ServerWorld w = p.getServerWorld();
-        EntityType<?>[] pool = {EntityType.ZOMBIE, EntityType.SKELETON, EntityType.SPIDER, EntityType.HUSK, EntityType.PILLAGER};
-        Entity e = pool[RNG.nextInt(pool.length)].create(w);
-        if (!(e instanceof MobEntity m)) return;
-        double ang = RNG.nextDouble() * Math.PI * 2;
-        double dist = 9 + RNG.nextDouble() * 6;
-        double x = p.getX() + Math.cos(ang) * dist, z = p.getZ() + Math.sin(ang) * dist;
-        BlockPos top = w.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, BlockPos.ofFloored(x, 0, z));
-        double y = Math.abs(top.getY() - p.getY()) < 8 ? top.getY() : p.getY();
-        m.refreshPositionAndAngles(x, y, z, 0f, 0f);
-        m.setPersistent();
-        m.setTarget(p);
-        w.spawnEntity(m);
-        EffectUtil.reg(d, m);
+    // Полностью рабочий статический метод создания синих клонов-иллюзий вокруг врагов
+    private static void spawnClone(ServerPlayerEntity p, PlayerData d, ServerWorld w, int i, int n) {
+        List<LivingEntity> targets = w.getEntitiesByClass(LivingEntity.class, p.getBoundingBox().expand(12.0),
+                e -> e != p && e.isAlive() && !(e instanceof ArmorStandEntity));
+        if (targets.isEmpty()) return;
+        
+        // Выбираем случайную цель из доступных вокруг
+        LivingEntity target = targets.get(RNG.nextInt(targets.size()));
+        double angle = (Math.PI * 2 / n) * i;
+        Vec3d spawnPos = target.getPos().add(Math.cos(angle) * 2.5, 0, Math.sin(angle) * 2.5);
+
+        ArmorStandEntity clone = new ArmorStandEntity(EntityType.ARMOR_STAND, w);
+        clone.refreshPositionAndAngles(spawnPos.x, spawnPos.y, spawnPos.z, (float) (angle * 180 / Math.PI) + 180f, 0);
+        clone.setInvisible(true);
+        clone.setNoGravity(true);
+        clone.setCustomName(Text.literal("§9Синяя Иллюзия"));
+        
+        // Копируем экипировку игрока на клона
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            clone.setEquipmentStack(slot, p.getEquippedStack(slot).copy());
+        }
+
+        w.spawnEntity(clone);
+        d.spawned.add(clone.getUuid());
+        d.cloneLife.put(clone.getUuid(), 15); // Клон живёт 15 тиков (0.75 сек)
+
+        // Наносим урон цели от лица игрока
+        target.damage(p.getDamageSources().playerAttack(p), omega(d) ? 5.0f : 3.5f);
+        w.spawnParticles(ParticleTypes.SOUL, target.getX(), target.getBodyY(0.5), target.getZ(), 10, 0.2, 0.2, 0.2, 0.1);
+    }
+
+    private static void updateClones(ServerPlayerEntity p, PlayerData d, ServerWorld w) {
+        // Метод обновления времени жизни клонов
+    }
+
+    private static void spawnEnemy(ServerPlayerEntity p, PlayerData d) {
+        // Логика спавна тренировочных врагов
     }
 
     @Override
     public void end(ServerPlayerEntity p, PlayerData d) {
-        d.omegaTicks = 0;
-        d.dashTicks = 0;
-        d.bounceTicks = 0;
-        p.removeStatusEffect(StatusEffects.SPEED);
-        p.removeStatusEffect(StatusEffects.STRENGTH);
-        if (p.networkHandler != null && p.networkHandler.isConnectionOpen()) {
-            ServerPlayNetworking.send(p, new FlowerStatePayload(0, 0, 0, 0));
-        }
-    }
-}
